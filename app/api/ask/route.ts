@@ -2,6 +2,7 @@ import { generateText, isStepCount, tool } from "ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { formatDistance } from "@/lib/geo";
+import { explainModelError, resolveModel } from "@/lib/model";
 import { formatAccess } from "@/lib/payload";
 import {
   fetchGlobalStats,
@@ -17,8 +18,6 @@ import {
  * subgraph query it made while answering — which is the point: The Graph is the data,
  * the model is only the interface to it.
  */
-
-const MODEL = "anthropic/claude-sonnet-5";
 
 export const maxDuration = 60;
 
@@ -41,11 +40,9 @@ export async function POST(request: Request) {
   if (!subgraphConfigured) {
     return NextResponse.json({ error: "No subgraph configured" }, { status: 503 });
   }
-  if (!process.env.AI_GATEWAY_API_KEY) {
-    return NextResponse.json(
-      { error: "AI_GATEWAY_API_KEY is not set, so the finder can't answer." },
-      { status: 503 },
-    );
+  const route = resolveModel();
+  if ("error" in route) {
+    return NextResponse.json({ error: route.error }, { status: 503 });
   }
 
   const body = (await request.json().catch(() => null)) as {
@@ -128,7 +125,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await generateText({
-      model: MODEL,
+      model: route.model,
       system: SYSTEM,
       prompt: question,
       tools: { findToilets, mapStats },
@@ -144,12 +141,7 @@ export async function POST(request: Request) {
       ),
     });
   } catch (error) {
-    // The gateway's own message arrives wrapped in ANSI colour codes, which look like
-    // line noise in a browser. Say the useful part plainly instead.
     const raw = error instanceof Error ? error.message : "The finder failed";
-    const message = /unauthenticated|authentication failed|invalid api key/i.test(raw)
-      ? "The AI Gateway rejected our API key. Check AI_GATEWAY_API_KEY."
-      : raw.replace(/\u001b\[\d+m/g, "").trim();
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: explainModelError(raw) }, { status: 502 });
   }
 }
