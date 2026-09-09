@@ -1,0 +1,95 @@
+"""
+A public toilet. Everything here was parsed out of an onchain event — there is no
+database behind this app, and no field arrives from anywhere but the chain.
+"""
+type Toilet @entity(immutable: false) {
+  "The onchain toilet id."
+  id: ID!
+  lat: BigDecimal!
+  lng: BigDecimal!
+
+  name: String!
+  "Which building, and how to find it once you're inside."
+  building: String!
+  "free | paid | customer | unknown"
+  access: String!
+  "Entry price in minor units of `currency` — 50 is £0.50."
+  price: Int!
+  currency: String!
+
+  "1–5, or 0 for not rated. These are the values the original contributor gave."
+  cleanliness: Int!
+  smell: Int!
+  busyness: Int!
+  hasPaper: Boolean!
+  hasBidet: Boolean!
+  isStaffed: Boolean!
+  hasMusic: Boolean!
+  style: String!
+  photoUrl: String!
+
+  "human | agent — who put this here."
+  source: String!
+  "Where it came from. An OSM node, an article, a review. Agents must supply one."
+  sourceUrl: String!
+  contributor: Contributor!
+
+  ratings: [Rating!]! @derivedFrom(field: "toilet")
+  ratingCount: Int!
+  "Mean cleanliness across the original entry and every rating since."
+  avgCleanliness: BigDecimal!
+
+  createdAt: BigInt!
+  updatedAt: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+"Somebody else's verdict on a toilet they didn't log."
+type Rating @entity(immutable: true) {
+  id: ID!
+  toilet: Toilet!
+  rater: Contributor!
+  cleanliness: Int!
+  smell: Int!
+  busyness: Int!
+  note: String!
+  createdAt: BigInt!
+  txHash: Bytes!
+}
+
+"A wallet that has contributed. Agents have wallets too."
+type Contributor @entity(immutable: false) {
+  "The address, lowercased."
+  id: ID!
+  toiletsLogged: Int!
+  ratingsGiven: Int!
+  "Mirrors the contract: 10 per human entry, 3 per agent entry, 1 per rating."
+  weight: BigInt!
+  claimed: BigInt!
+  firstSeenAt: BigInt!
+  toilets: [Toilet!]! @derivedFrom(field: "contributor")
+  ratings: [Rating!]! @derivedFrom(field: "rater")
+}
+
+type Donation @entity(immutable: true) {
+  id: ID!
+  donor: Bytes!
+  amount: BigInt!
+  note: String!
+  createdAt: BigInt!
+  txHash: Bytes!
+}
+
+"One row, id `global`. Saves the leaderboard a full table scan."
+type Global @entity(immutable: false) {
+  id: ID!
+  toiletCount: Int!
+  humanToilets: Int!
+  agentToilets: Int!
+  ratingCount: Int!
+  contributorCount: Int!
+  totalWeight: BigInt!
+  totalDonated: BigInt!
+  totalClaimed: BigInt!
+}

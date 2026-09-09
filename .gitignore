@@ -50,3 +50,4 @@ contracts/types
 subgraph/generated
 subgraph/build
 data/*.raw.json
+subgraph/subgraph.yaml

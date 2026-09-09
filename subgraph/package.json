@@ -1,0 +1,14 @@
+{
+  "name": "@world-wide-wc/subgraph",
+  "private": true,
+  "scripts": {
+    "prepare:manifest": "cd .. && tsx scripts/build-manifest.ts",
+    "codegen": "npm run prepare:manifest && graph codegen",
+    "build": "npm run codegen && graph build",
+    "deploy": "npm run build && graph deploy world-wide-wc"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.98.1",
+    "@graphprotocol/graph-ts": "^0.38.2"
+  }
+}

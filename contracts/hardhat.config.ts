@@ -1,6 +1,9 @@
 import { defineConfig } from "hardhat/config";
 import hardhatToolboxViem from "@nomicfoundation/hardhat-toolbox-viem";
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+
+// One .env at the repo root serves the app, the scripts and the contracts.
+loadEnv({ path: "../.env" });
 
 const RPC_URL = process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org";
 const DEPLOYER_KEY = process.env.DEPLOYER_PRIVATE_KEY;

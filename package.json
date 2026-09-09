@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "contracts:build": "npm --prefix contracts run build",
+    "contracts:test": "npm --prefix contracts test",
+    "sync:abi": "tsx scripts/sync-abi.ts",
+    "deploy": "tsx scripts/deploy.ts"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.11",
