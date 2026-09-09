@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { GeolocateControl, Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { MAP_STYLE_URL, configureMapWorker } from "@/lib/map";
 
 /**
  * A map whose only job is to answer "which toilet?". Drag the pin, or click anywhere.
@@ -22,10 +23,11 @@ export function PinMap({
 
   useEffect(() => {
     if (!container.current || map.current) return;
+    configureMapWorker();
 
     const instance = new MapLibreMap({
       container: container.current,
-      style: "https://tiles.openfreemap.org/styles/bright",
+      style: MAP_STYLE_URL,
       center: [position.lng, position.lat],
       zoom: 16,
       attributionControl: { compact: true },

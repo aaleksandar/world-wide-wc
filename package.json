@@ -13,7 +13,10 @@
     "deploy": "tsx scripts/deploy.mts",
     "harvest": "tsx scripts/harvest.mts",
     "smoke": "tsx scripts/smoke.mts",
-    "seed": "tsx scripts/submit-seed.mts"
+    "seed": "tsx scripts/submit-seed.mts",
+    "copy:map-worker": "tsx scripts/copy-map-worker.mts",
+    "predev": "npm run copy:map-worker",
+    "prebuild": "npm run copy:map-worker"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",

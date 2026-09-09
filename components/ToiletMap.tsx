@@ -9,6 +9,7 @@ import {
   type GeoJSONSource,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { MAP_STYLE_URL, configureMapWorker } from "@/lib/map";
 import type { ToiletRecord } from "@/lib/subgraph";
 import { ToiletCard } from "./ToiletCard";
 
@@ -18,7 +19,6 @@ import { ToiletCard } from "./ToiletCard";
  * city.
  */
 
-const STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
 const SOURCE_ID = "toilets";
 
 const ACCESS_COLOURS: Record<string, string> = {
@@ -47,10 +47,11 @@ export function ToiletMap({
 
   useEffect(() => {
     if (!container.current || map.current) return;
+    configureMapWorker();
 
     const instance = new MapLibreMap({
       container: container.current,
-      style: STYLE_URL,
+      style: MAP_STYLE_URL,
       center,
       zoom: 12.5,
       attributionControl: { compact: true },

@@ -50,3 +50,6 @@ subgraph/generated
 subgraph/build
 data/*.raw.json
 subgraph/subgraph.yaml
+
+# Copied from node_modules by scripts/copy-map-worker.mts on predev/prebuild
+public/maplibre
