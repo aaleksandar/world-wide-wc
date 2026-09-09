@@ -284,6 +284,12 @@ export const wwwcAbi = [
       },
       {
         "indexed": false,
+        "internalType": "bool",
+        "name": "isAgent",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
         "internalType": "string",
         "name": "payload",
         "type": "string"
@@ -535,6 +541,11 @@ export const wwwcAbi = [
         "internalType": "string",
         "name": "payload",
         "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "isAgent",
+        "type": "bool"
       }
     ],
     "name": "log",

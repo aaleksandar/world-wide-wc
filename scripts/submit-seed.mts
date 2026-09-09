@@ -13,6 +13,7 @@ import { formatEther } from "viem";
 import { contractAddress, toChainCoord } from "../lib/chain";
 import { encodePayload, type Toilet } from "../lib/payload";
 import { publicClient, relayerClient } from "../lib/relayer";
+import { readUntilAtLeast } from "../lib/rpc";
 import { wwwcAbi } from "../lib/wwwc-abi";
 
 type HarvestedToilet = {
@@ -110,16 +111,8 @@ if (lastHash) {
 const readCount = () =>
   publicClient.readContract({ address: contractAddress, abi: wwwcAbi, functionName: "toiletCount" });
 
-// Immediately after a receipt the public RPC will still serve an older block — an earlier
-// run reported three toilets when six were onchain. Pinning the read to the receipt's
-// block doesn't work either: sepolia.base.org is not an archive node and answers
-// "block not found". So poll the latest until it catches up.
 const expected = countBefore + BigInt(pending.length - failures);
-let onchain = await readCount();
-for (let attempt = 0; onchain < expected && attempt < 15; attempt++) {
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  onchain = await readCount();
-}
+const onchain = await readUntilAtLeast(readCount, expected, "toiletCount");
 
 const spent = balanceBefore - (await publicClient.getBalance({ address: account.address }));
 

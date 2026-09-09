@@ -1,5 +1,5 @@
 import { chain, contractAddress } from "./chain";
-import type { Toilet } from "./payload";
+import type { Source, Toilet } from "./payload";
 
 /**
  * The message a contributor signs.
@@ -56,6 +56,12 @@ export type ContributeRequest = {
   lat: number;
   lng: number;
   toilet: Partial<Toilet>;
+  /**
+   * Who found this. Agents must say so and must supply `toilet.sourceUrl`. Declaring
+   * yourself an agent earns less (3 weight against 10), so the honest answer is also the
+   * one nobody has an incentive to fake.
+   */
+  source?: Source;
   signedAt: number;
   signature: `0x${string}`;
 };

@@ -12,6 +12,7 @@ import "dotenv/config";
 import { decodeEventLog, formatEther, parseEther } from "viem";
 import { contractAddress, explorerTxUrl } from "../lib/chain";
 import { publicClient, relayerClient } from "../lib/relayer";
+import { readUntil } from "../lib/rpc";
 import { wwwcAbi } from "../lib/wwwc-abi";
 
 const wallet = relayerClient();
@@ -21,18 +22,8 @@ const contract = { address: contractAddress, abi: wwwcAbi } as const;
 const read = (functionName: string, args?: unknown[]) =>
   publicClient.readContract({ ...contract, functionName, args } as never) as Promise<bigint>;
 
-/**
- * Right after a receipt the public RPC still serves an older block, so a read taken
- * immediately can report the pre-transaction world. Wait for it to catch up.
- */
-async function readAfter(fn: string, args: unknown[] | undefined, changedFrom: bigint) {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const value = await read(fn, args);
-    if (value !== changedFrom) return value;
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-  }
-  throw new Error(`${fn} never changed from ${changedFrom}`);
-}
+const readAfter = (fn: string, args: unknown[] | undefined, changedFrom: bigint) =>
+  readUntil(() => read(fn, args), (value) => value !== changedFrom, { label: fn });
 
 async function state(label: string) {
   const [donated, totalWeight, myWeight, pending, poolPending, held] = await Promise.all([

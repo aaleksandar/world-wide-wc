@@ -283,6 +283,12 @@
       },
       {
         "indexed": false,
+        "internalType": "bool",
+        "name": "isAgent",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
         "internalType": "string",
         "name": "payload",
         "type": "string"
@@ -534,6 +540,11 @@
         "internalType": "string",
         "name": "payload",
         "type": "string"
+      },
+      {
+        "internalType": "bool",
+        "name": "isAgent",
+        "type": "bool"
       }
     ],
     "name": "log",

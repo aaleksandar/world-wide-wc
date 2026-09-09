@@ -164,12 +164,27 @@ describe("WorldWideWC rewards", () => {
       client: { wallet: wallets[2] },
     });
 
-    await asAlice.write.log([LONDON_LAT, LONDON_LNG, "{}"]);
+    await asAlice.write.log([LONDON_LAT, LONDON_LNG, "{}", false]);
 
     // Credited to the sender, at full human weight, with nobody in between.
     assert.equal(await wc.read.weightOf([alice]), 10n);
     assert.equal(await wc.read.balanceOf([alice]), parseEther("10"));
     assert.equal(await wc.read.toiletCount(), 1n);
+  });
+
+  it("lets a third-party agent declare itself, and pays it less for saying so", async () => {
+    const { wc } = await deploy();
+    const wallets = await viem.getWalletClients();
+    const asBob = await viem.getContractAt("WorldWideWC", wc.address, {
+      client: { wallet: wallets[3] },
+    });
+
+    await asBob.write.log([LONDON_LAT, LONDON_LNG, '{"src":"agent"}', true]);
+
+    // Self-declared provenance is safe precisely because honesty is the cheaper option:
+    // nobody lies their way into 3 weight when they could have claimed 10.
+    assert.equal(await wc.read.weightOf([bob]), 3n);
+    assert.equal(await wc.read.balanceOf([bob]), parseEther("3"));
   });
 
   it("never lets the relayer touch the reward pool", async () => {

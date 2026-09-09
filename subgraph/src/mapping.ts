@@ -41,7 +41,6 @@ const K_CHANGING = "ch";
 const K_OPENING_HOURS = "oh";
 const K_STYLE = "sy";
 const K_PHOTO = "ph";
-const K_SOURCE = "src";
 const K_SOURCE_URL = "url";
 const K_NOTE = "note";
 
@@ -174,8 +173,10 @@ export function handleToiletLogged(event: ToiletLogged): void {
   toilet.style = readString(payload, K_STYLE);
   toilet.photoUrl = readString(payload, K_PHOTO);
 
-  const source = readString(payload, K_SOURCE);
-  toilet.source = source == "agent" ? "agent" : "human";
+  // Provenance comes from the event, not the payload: the contract set the contributor's
+  // weight from this same flag, so it is the only version of the fact that cost anything
+  // to assert. A payload key saying otherwise is just a claim.
+  toilet.source = event.params.isAgent ? "agent" : "human";
   toilet.sourceUrl = readString(payload, K_SOURCE_URL);
   toilet.contributor = contributorId;
 

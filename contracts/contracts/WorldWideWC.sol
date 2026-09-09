@@ -48,7 +48,12 @@ contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
     mapping(address contributor => uint256) public claimedOf;
 
     event ToiletLogged(
-        uint256 indexed id, address indexed contributor, int32 lat, int32 lng, string payload
+        uint256 indexed id,
+        address indexed contributor,
+        int32 lat,
+        int32 lng,
+        bool isAgent,
+        string payload
     );
     event ToiletRated(uint256 indexed id, address indexed rater, string payload);
     event Donated(address indexed donor, uint256 amount, string note);
@@ -80,12 +85,23 @@ contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
     /// @param lat Latitude at 1e6 scale, so 51.504936 is 51504936.
     /// @param lng Longitude at 1e6 scale.
     /// @param payload Compact JSON of the toilet's attributes and its provenance.
+    /// @param isAgent Declare true if software sourced this rather than a person standing
+    ///        in front of it. Third-party agents are expected to use this path.
+    ///
+    /// Provenance is self-declared, and that is safe because it costs you to be honest in
+    /// the only direction anyone would cheat: an agent entry is worth 3 weight, a human
+    /// one 10. Nobody lies their way into a smaller reward. Claiming to be human when you
+    /// are software is the lie worth telling, and that is the one the map's readers can
+    /// catch, because an agent entry without a working source URL is visibly worthless.
     ///
     /// This path needs no server at all: the contract credits `msg.sender`, so there is
     /// nobody to trust in between. Anyone with a wallet and some gas can add to this map
     /// even if every server we run disappears.
-    function log(int32 lat, int32 lng, string calldata payload) external returns (uint256 id) {
-        return _log(msg.sender, lat, lng, payload, false);
+    function log(int32 lat, int32 lng, string calldata payload, bool isAgent)
+        external
+        returns (uint256 id)
+    {
+        return _log(msg.sender, lat, lng, payload, isAgent);
     }
 
     /// @notice Rate an existing toilet, paying your own gas.
@@ -124,7 +140,7 @@ contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
     ) internal returns (uint256 id) {
         id = ++toiletCount;
         _addWeight(contributor, isAgent ? WEIGHT_AGENT_LOG : WEIGHT_HUMAN_LOG);
-        emit ToiletLogged(id, contributor, lat, lng, payload);
+        emit ToiletLogged(id, contributor, lat, lng, isAgent, payload);
     }
 
     function _rate(uint256 id, address rater, string calldata payload) internal {

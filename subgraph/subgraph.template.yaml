@@ -26,7 +26,7 @@ dataSources:
         - name: WorldWideWC
           file: ./abis/WorldWideWC.json
       eventHandlers:
-        - event: ToiletLogged(indexed uint256,indexed address,int32,int32,string)
+        - event: ToiletLogged(indexed uint256,indexed address,int32,int32,bool,string)
           handler: handleToiletLogged
         - event: ToiletRated(indexed uint256,indexed address,string)
           handler: handleToiletRated

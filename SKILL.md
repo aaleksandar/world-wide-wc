@@ -1,0 +1,134 @@
+---
+name: world-wide-wc
+description: Read and contribute to World Wide WC, an onchain map of public toilets. Use when finding a toilet near a location, or when an agent has sourced toilet data from the web and wants to publish it with provenance.
+---
+
+# World Wide WC
+
+An onchain map of public toilets. Anyone can read it, and anyone — person or agent — can
+add to it. Contributors earn a share of everything donated to the project.
+
+There is no database. Every toilet is an event on Base Sepolia, indexed by a subgraph on
+The Graph, and that subgraph is the only read path.
+
+| | |
+|---|---|
+| Subgraph | `https://api.studio.thegraph.com/query/1759984/world-wide-wc/v0.0.2` |
+| Contract | [`0xbc2061d477297463051729069e60802ecbf64df3`](https://sepolia.basescan.org/address/0xbc2061d477297463051729069e60802ecbf64df3) |
+| Chain | Base Sepolia (84532) |
+
+## Reading
+
+Plain GraphQL, no key needed.
+
+```graphql
+{
+  toilets(
+    first: 10
+    where: { access: "free", hasChangingTable: true, lat_gte: "51.50", lat_lte: "51.52" }
+    orderBy: createdAt
+    orderDirection: desc
+  ) {
+    id name building access price currency
+    lat lng openingHours
+    hasPaper hasBidet isStaffed isAccessible hasChangingTable
+    cleanliness smell busyness avgCleanliness ratingCount
+    source sourceUrl
+    contributor { id weight }
+  }
+}
+```
+
+`access` is one of `free`, `paid`, `customer`, `unknown`. `price` is minor units of
+`currency`, so `50` with `GBP` means 50p. The 1–5 scales (`cleanliness`, `smell`,
+`busyness`) are `0` when nobody has said.
+
+The subgraph has no notion of "near me" — filter by a latitude/longitude box and sort by
+real distance yourself.
+
+Other entities: `contributors` (leaderboard, ordered by `weight`), `donations`,
+`ratings`, and `global(id: "global")` for totals.
+
+## Contributing
+
+Every entry is credited to a wallet address, and that address is what earns rewards. So
+an agent needs its own wallet.
+
+**Say you are an agent, and say where the data came from.** `isAgent: true` earns 3
+weight; a person who was actually there earns 10. Nobody lies their way into a smaller
+reward, which is why self-declared provenance is safe. An agent entry without a working
+`sourceUrl` is worthless to everyone reading the map — it is the only thing it has
+instead of somebody having been there.
+
+Do not invent attributes. `cleanliness`, `smell` and `busyness` cannot be known from the
+web; leave them at 0 and let a human who visited fill them in. Publishing a guess there
+is worse than publishing nothing, because it displaces the observation it imitates.
+
+### Directly (no dependency on us)
+
+Call the contract. Needs a wallet with a little Base Sepolia ETH.
+
+```solidity
+function log(int32 lat, int32 lng, string payload, bool isAgent) external returns (uint256 id);
+function rate(uint256 id, string payload) external;
+```
+
+Latitude and longitude are `int32` at 1e6 scale: `51.504936` → `51504936`.
+
+`payload` is compact JSON, keys abbreviated because it is calldata:
+
+| key | meaning | key | meaning |
+|---|---|---|---|
+| `n` | name | `pa` | has paper |
+| `b` | building, and how to find it inside | `bi` | has bidet |
+| `a` | `free` / `paid` / `customer` / `unknown` | `st` | staffed |
+| `p` | price in minor units | `wh` | step-free access |
+| `cur` | currency code, default `GBP` | `ch` | changing table |
+| `c` | cleanliness 1–5 | `mu` | music |
+| `sm` | smell 1–5 | `oh` | opening hours |
+| `bu` | busyness 1–5 | `sy` | free-text character |
+| `ph` | photo URL | `url` | **source URL — required for agents** |
+
+Omit anything you don't know. Every key is optional to the contract; `url` is what the
+map's readers judge you on.
+
+```jsonc
+{"n":"Southbank Centre","b":"Royal Festival Hall, level 2","a":"free","wh":true,
+ "url":"https://www.southbankcentre.co.uk/visit/accessibility"}
+```
+
+### Relayed (no gas needed)
+
+Sign an EIP-712 message and POST it; the project pays the gas. Rate-limited to 30 per
+address per minute — if you need more, use the direct path above.
+
+`POST /api/contribute`
+
+```jsonc
+{
+  "contributor": "0x…",          // your wallet
+  "lat": 51.5033, "lng": -0.1195, // decimal degrees here, not 1e6
+  "toilet": { "name": "…", "access": "free", "sourceUrl": "https://…" },
+  "source": "agent",
+  "signedAt": 1788970000,         // unix seconds; signatures expire after 5 minutes
+  "signature": "0x…"
+}
+```
+
+The EIP-712 domain is `{ name: "World Wide WC", version: "1", chainId: 84532,
+verifyingContract: <contract> }` and the type is
+`Contribution(address contributor,int32 lat,int32 lng,string payload,uint256 signedAt)`,
+where `payload` is the encoded JSON above.
+
+Note the tradeoff: this route verifies your signature off-chain, so it asks you to trust
+the project's server. The direct path asks you to trust nobody.
+
+## Rewards
+
+Contributing earns weight — 10 for a human entry, 3 for an agent entry, 1 for rating
+someone else's. Anyone can `donate()` to the contract, and every donation is split across
+all contributors in proportion to weight, claimable with `claim()`. You also get `$WC`,
+an ERC-20, one per unit of weight.
+
+Money enters only through `donate()`, from a donor's own wallet, and leaves only through
+`claim()`. The relayer that pays gas has no access to it.
