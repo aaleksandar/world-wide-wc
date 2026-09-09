@@ -16,7 +16,8 @@
     "seed": "tsx scripts/submit-seed.mts",
     "copy:map-worker": "tsx scripts/copy-map-worker.mts",
     "predev": "npm run copy:map-worker",
-    "prebuild": "npm run copy:map-worker"
+    "prebuild": "npm run copy:map-worker",
+    "check:ai-key": "tsx scripts/check-ai-key.mts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
@@ -27,7 +28,8 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "viem": "^2.56.3",
-    "wagmi": "^2.19.5"
+    "wagmi": "^2.19.5",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

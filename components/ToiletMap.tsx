@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from "react";
 // MapLibre 6 dropped the default export; everything is named now.
 import {
   GeolocateControl,
+  LngLatBounds,
   Map as MapLibreMap,
   NavigationControl,
   type GeoJSONSource,
+  type ExpressionSpecification,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLE_URL, configureMapWorker } from "@/lib/map";
 import type { ToiletRecord } from "@/lib/subgraph";
+import { AskBox } from "./AskBox";
 import { ToiletCard } from "./ToiletCard";
 
 /**
@@ -41,6 +44,9 @@ export function ToiletMap({
   const map = useRef<MapLibreMap | null>(null);
   const [selected, setSelected] = useState<ToiletRecord | null>(null);
   const [ready, setReady] = useState(false);
+  // Ids the finder just returned. Everything else dims, so an answer is visible as a
+  // shape on the map rather than only as a paragraph of text.
+  const [highlighted, setHighlighted] = useState<string[]>([]);
 
   const byId = useRef(new Map<string, ToiletRecord>());
   byId.current = new Map(toilets.map((toilet) => [toilet.id, toilet]));
@@ -78,6 +84,7 @@ export function ToiletMap({
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 16, 16],
           "circle-color": ["get", "colour"],
           "circle-opacity": 0.18,
+          "circle-opacity-transition": { duration: 200 },
         },
       });
 
@@ -136,17 +143,49 @@ export function ToiletMap({
     });
   }, [toilets, ready]);
 
+  // Dim everything the finder didn't pick, and fly to what it did.
+  useEffect(() => {
+    if (!ready || !map.current) return;
+    const instance = map.current;
+    const dim: ExpressionSpecification | number = highlighted.length
+      ? ["case", ["in", ["get", "id"], ["literal", highlighted]], 1, 0.15]
+      : 1;
+    instance.setPaintProperty("toilet-dot", "circle-opacity", dim);
+    instance.setPaintProperty(
+      "toilet-halo",
+      "circle-opacity",
+      highlighted.length ? ["case", ["in", ["get", "id"], ["literal", highlighted]], 0.3, 0.04] : 0.18,
+    );
+
+    const matches = toilets.filter((toilet) => highlighted.includes(toilet.id));
+    if (matches.length === 0) return;
+    const bounds = matches.reduce(
+      (box, toilet) => box.extend([toilet.lng, toilet.lat]),
+      new LngLatBounds([matches[0].lng, matches[0].lat], [matches[0].lng, matches[0].lat]),
+    );
+    instance.fitBounds(bounds, { padding: 120, maxZoom: 16, duration: 900 });
+  }, [highlighted, ready, toilets]);
+
   return (
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
 
       {isPreview ? (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3">
+        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-10 flex justify-center p-3">
           <p className="pointer-events-auto rounded-full bg-amber-500 px-4 py-1.5 text-xs font-medium text-amber-950 shadow-lg">
             Preview data — no subgraph configured, nothing here is onchain yet
           </p>
         </div>
       ) : null}
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3">
+        <div className="pointer-events-auto w-full max-w-md">
+          <AskBox
+            origin={{ lat: center[1], lng: center[0] }}
+            onResults={(results) => setHighlighted(results.map((r) => r.id))}
+          />
+        </div>
+      </div>
 
       {selected ? (
         <div className="absolute inset-x-0 bottom-0 z-20 p-3 sm:inset-x-auto sm:right-3 sm:bottom-3 sm:w-96">

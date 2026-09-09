@@ -1,3 +1,4 @@
+import { boundingBox, distanceMetres } from "./geo";
 import type { Access, Source } from "./payload";
 
 /**
@@ -211,4 +212,62 @@ export async function fetchTopContributors(first = 20): Promise<ContributorRecor
     { first },
   );
   return data.contributors;
+}
+
+export type ToiletSearch = {
+  lat: number;
+  lng: number;
+  radiusMetres: number;
+  /** Omit to accept any way of getting in. */
+  access?: Access[];
+  minCleanliness?: number;
+  needsPaper?: boolean;
+  needsStepFree?: boolean;
+  needsChangingTable?: boolean;
+  needsBidet?: boolean;
+  limit: number;
+};
+
+export type ToiletHit = ToiletRecord & { distanceMetres: number };
+
+/**
+ * The subgraph does the coarse work with a bounding box and attribute filters; we measure
+ * real distance on the handful of rows that come back. Ordering by distance in GraphQL
+ * isn't possible — the subgraph has no idea where the person asking is standing.
+ */
+export async function searchToilets(search: ToiletSearch): Promise<ToiletHit[]> {
+  if (!subgraphConfigured) return [];
+
+  const box = boundingBox(search, search.radiusMetres);
+  const where: Record<string, unknown> = {
+    lat_gte: box.minLat.toString(),
+    lat_lte: box.maxLat.toString(),
+    lng_gte: box.minLng.toString(),
+    lng_lte: box.maxLng.toString(),
+  };
+
+  if (search.access?.length) where.access_in = search.access;
+  if (search.minCleanliness) where.avgCleanliness_gte = search.minCleanliness.toString();
+  if (search.needsPaper) where.hasPaper = true;
+  if (search.needsStepFree) where.isAccessible = true;
+  if (search.needsChangingTable) where.hasChangingTable = true;
+  if (search.needsBidet) where.hasBidet = true;
+
+  const data = await query<{ toilets: RawToilet[] }>(
+    `query Search($where: Toilet_filter!, $first: Int!) {
+      toilets(where: $where, first: $first) { ${TOILET_FIELDS} }
+    }`,
+    // Pull more than we need: the box is square and the radius is round, and we sort by
+    // true distance afterwards.
+    { where, first: Math.max(search.limit * 5, 50) },
+  );
+
+  return data.toilets
+    .map((raw) => {
+      const record = toRecord(raw);
+      return { ...record, distanceMetres: distanceMetres(search, record) };
+    })
+    .filter((hit) => hit.distanceMetres <= search.radiusMetres)
+    .sort((a, b) => a.distanceMetres - b.distanceMetres)
+    .slice(0, search.limit);
 }
