@@ -1,29 +1,158 @@
 # World Wide WC
 
-**Mapping the world wide WC.** A decentralised, agentic map of public toilets, where the
-people and agents who contribute the data are the ones who get paid for it.
+**Mapping the world wide WC.** An onchain map of public toilets, fed by people and by
+other people's AI agents, where everyone who contributes gets paid out of what anyone
+donates.
 
-Built for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026) — targeting
-The Graph's *Best AI Tooling or AI Use Case* track.
+Built for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026).
+
+| | |
+|---|---|
+| Contract | [`0xbc2061d477297463051729069e60802ecbf64df3`](https://sepolia.basescan.org/address/0xbc2061d477297463051729069e60802ecbf64df3) · Base Sepolia |
+| Subgraph | [`world-wide-wc/v0.0.2`](https://api.studio.thegraph.com/query/1759984/world-wide-wc/v0.0.2) · Subgraph Studio |
+| Agent docs | [SKILL.md](./SKILL.md) |
 
 ## The problem
 
-Google Maps is bad at toilets. Not all are mapped, the information goes stale, the building
-is usually not identified, and you can never tell whether it's free, customers-only, clean,
-staffed, or stocked with paper until you're standing in front of it.
+Google Maps is bad at toilets. Not all are mapped. The information goes stale. The
+building usually isn't identified, so you know a toilet is *somewhere* in the station.
+And you can never tell whether it's free, customers-only, clean, staffed, step-free, or
+stocked with paper until you are standing in front of it.
+
+Those last facts are the ones that matter, and they're precisely the ones no dataset has,
+because knowing them requires somebody to have been there.
 
 ## The idea
 
-1. **Humans and AI agents both contribute**, and every entry carries provenance — a wallet
-   address for a human, a source URL for an agent.
-2. **Every contribution is an on-chain event.** A subgraph on The Graph is the only read
-   path in this app; there is no database.
-3. **Donations to the toilet cause flow back to contributors** as claimable rewards,
-   weighted by what they contributed.
+Two kinds of contributor, and the map always says which one you're looking at.
 
-## Status
+**Agents bootstrap it.** Anyone's agent — not just ours — can read a public source and
+publish what it found: location, access, price, opening hours, step-free access. It must
+declare itself an agent and attach the URL it read.
 
-Work in progress — built during the hackathon, committed as it goes.
+**People make it trustworthy.** Somebody standing in the toilet can say the things
+software cannot: is it clean, does it smell, is there paper, is there a queue.
+
+**Donations flow to both.** Anyone can donate to the toilet cause. Every donation splits
+across all contributors in proportion to what they contributed, claimable whenever they
+want it.
+
+## Why The Graph is load-bearing
+
+There is no database in this project. Every toilet, rating, donation and claim is an
+event on Base Sepolia; a subgraph indexes them; and `lib/subgraph.ts` — one file, the
+app's only read path — is the only way this site gets data. Turn the subgraph off and the
+map is blank.
+
+## Provenance is an onchain fact
+
+The contract emits `isAgent` on every entry and the subgraph reads *that*, not a field in
+the JSON payload. It's the same flag that set the contributor's weight, so it's the only
+version of the claim that cost anything to assert.
+
+Provenance is self-declared, and that's safe because honesty is the cheaper option:
+
+| | weight |
+|---|---|
+| A person who was there | 10 |
+| An agent that read a source | 3 |
+| Rating someone else's entry | 1 |
+
+Nobody lies their way into a smaller reward. The lie worth telling is claiming to be
+human when you're software — and that's the one readers can catch, because an agent entry
+without a working source URL is visibly worthless.
+
+Agent entries also leave `cleanliness`, `smell` and `busyness` at zero on purpose. A guess
+there would displace the observation it imitates.
+
+## Two ways to contribute, and only one of them needs us
+
+```solidity
+function log(int32 lat, int32 lng, string payload, bool isAgent) external returns (uint256);
+```
+
+**Directly.** Call the contract, pay your own gas, depend on nothing of ours. If every
+server we run disappeared, the map would still be there and anyone could keep adding to
+it.
+
+**Relayed.** Sign an EIP-712 message and POST it to `/api/contribute`; we pay the gas, so
+a contributor never needs to hold ETH. This is what makes "add a toilet" a thing you can
+do in ten seconds instead of a thing that starts with finding a faucet.
+
+Both paths are exercised end to end by `scripts/test-third-party-agent.mts`, using a
+wallet generated on the spot to stand in for a stranger.
+
+**Known limitation:** the relayed path verifies signatures *off-chain*, so it asks you to
+trust this project's server not to invent contributions. The direct path asks you to trust
+nobody. The signed struct is shaped to move on-chain as EIP-712 with a nonce, which is the
+first thing to do after the hackathon.
+
+## The reward pool
+
+Money enters only through `donate()`, from a donor's own wallet, and leaves only through
+`claim()`. The relayer that pays gas for contributions cannot touch it, and there's a test
+that says so.
+
+Payouts use a pull-based accumulator, so a donation costs the same gas whether there are
+five contributors or fifty thousand — it never loops over them. The accumulator is whole
+wei per unit of weight rather than scaled fixed-point, which makes an entitlement a plain
+multiplication with nothing to truncate. The fixed-point version leaked a wei per flush;
+the conservation test caught it before it ever reached a testnet.
+
+A donation that doesn't divide evenly leaves a remainder pending for the next one — 0.001
+ETH across weight 370 carries 260 wei. Nothing is lost, it just arrives later.
+
+## Running it
+
+```bash
+npm install
+cp .env.example .env        # fill in the keys it names
+
+npm run contracts:test      # 11 tests, mostly about the reward maths
+npm run contracts:build
+npm run sync:abi            # ABI → lib/ and subgraph/
+npm run deploy              # → Base Sepolia, prints the env lines to paste back
+
+npm --prefix subgraph run deploy   # → Subgraph Studio
+
+npm run harvest -- --city london --limit 120   # OpenStreetMap → data/seed-london.json
+npm run seed -- --city london --limit 120      # → onchain, as agent entries
+
+npm run dev
+```
+
+Verification scripts, all against the live deployment rather than a local node:
+
+| | |
+|---|---|
+| `npm run smoke` | write a toilet onchain, read it back out of The Graph |
+| `npx tsx scripts/test-rewards.mts` | donate → accrue → claim, asserting conservation |
+| `npx tsx scripts/test-third-party-agent.mts` | a stranger's agent contributing both ways |
+| `npx tsx scripts/status.mts` | does the subgraph agree with the chain? |
+
+## Notes from the build
+
+Two failures worth writing down, because both were invisible.
+
+**MapLibre 6 never starts its worker under Turbopack.** The map painted nothing while
+reporting no errors: style, TileJSON and sprites all loaded, the canvas was sized, WebGL
+was healthy, and not one vector tile was ever requested. MapLibre derives its worker URL
+from `import.meta.url` and returns an empty string when that isn't an `http(s)` URL, which
+is exactly what Turbopack hands it. We serve the worker from our own origin instead
+(`scripts/copy-map-worker.mts`).
+
+**A receipt does not mean the next read sees the transaction.** `sepolia.base.org` sits
+behind a pool of nodes and regularly answers a read from a block or two back. It produced
+a seeder reporting three toilets when six were onchain, a payout short by exactly one
+transaction's gas, a gas estimate failing with "gas required exceeds allowance (0)"
+against a funded wallet, and a weight of 3 where 6 was right. Every one looked like a
+contract bug; none were. `lib/rpc.ts` polls until the world catches up. Pinning reads to
+the receipt's block doesn't work — the public endpoint isn't an archive node.
+
+## Stack
+
+Next.js 16 · MapLibre GL 6 + OpenFreeMap · wagmi + viem · Solidity 0.8.28 with Hardhat 3 ·
+The Graph (Subgraph Studio) · Base Sepolia · Vercel Blob for photos
 
 ## Licence
 
