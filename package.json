@@ -12,7 +12,8 @@
     "sync:abi": "tsx scripts/sync-abi.mts",
     "deploy": "tsx scripts/deploy.mts",
     "harvest": "tsx scripts/harvest.mts",
-    "smoke": "tsx scripts/smoke.mts"
+    "smoke": "tsx scripts/smoke.mts",
+    "seed": "tsx scripts/submit-seed.mts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
