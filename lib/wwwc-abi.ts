@@ -522,6 +522,35 @@ export const wwwcAbi = [
   {
     "inputs": [
       {
+        "internalType": "int32",
+        "name": "lat",
+        "type": "int32"
+      },
+      {
+        "internalType": "int32",
+        "name": "lng",
+        "type": "int32"
+      },
+      {
+        "internalType": "string",
+        "name": "payload",
+        "type": "string"
+      }
+    ],
+    "name": "log",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "contributor",
         "type": "address"
@@ -614,6 +643,24 @@ export const wwwcAbi = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "payload",
+        "type": "string"
+      }
+    ],
+    "name": "rate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

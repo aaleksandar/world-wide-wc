@@ -76,12 +76,30 @@ contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
 
     // --- contributing -------------------------------------------------------
 
-    /// @notice Log a toilet on behalf of `contributor`.
+    /// @notice Log a toilet, paying your own gas.
     /// @param lat Latitude at 1e6 scale, so 51.504936 is 51504936.
     /// @param lng Longitude at 1e6 scale.
     /// @param payload Compact JSON of the toilet's attributes and its provenance.
+    ///
+    /// This path needs no server at all: the contract credits `msg.sender`, so there is
+    /// nobody to trust in between. Anyone with a wallet and some gas can add to this map
+    /// even if every server we run disappears.
+    function log(int32 lat, int32 lng, string calldata payload) external returns (uint256 id) {
+        return _log(msg.sender, lat, lng, payload, false);
+    }
+
+    /// @notice Rate an existing toilet, paying your own gas.
+    function rate(uint256 id, string calldata payload) external {
+        _rate(id, msg.sender, payload);
+    }
+
+    /// @notice Log a toilet on behalf of `contributor`, who signed for it offchain.
     /// @param isAgent True when an agent sourced this from the web rather than a human
     ///        standing in front of it.
+    ///
+    /// The relayer pays the gas so a contributor never has to hold ETH. It cannot pay
+    /// itself: every function it can call is non-payable, and the reward pool is reachable
+    /// only through donate() and claim().
     function logFor(
         address contributor,
         int32 lat,
@@ -89,13 +107,27 @@ contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
         string calldata payload,
         bool isAgent
     ) external onlyRelayer returns (uint256 id) {
+        return _log(contributor, lat, lng, payload, isAgent);
+    }
+
+    /// @notice Rate an existing toilet on behalf of `rater`, who signed for it offchain.
+    function rateFor(uint256 id, address rater, string calldata payload) external onlyRelayer {
+        _rate(id, rater, payload);
+    }
+
+    function _log(
+        address contributor,
+        int32 lat,
+        int32 lng,
+        string calldata payload,
+        bool isAgent
+    ) internal returns (uint256 id) {
         id = ++toiletCount;
         _addWeight(contributor, isAgent ? WEIGHT_AGENT_LOG : WEIGHT_HUMAN_LOG);
         emit ToiletLogged(id, contributor, lat, lng, payload);
     }
 
-    /// @notice Rate an existing toilet on behalf of `rater`.
-    function rateFor(uint256 id, address rater, string calldata payload) external onlyRelayer {
+    function _rate(uint256 id, address rater, string calldata payload) internal {
         if (id == 0 || id > toiletCount) revert NoSuchToilet();
         _addWeight(rater, WEIGHT_RATING);
         emit ToiletRated(id, rater, payload);

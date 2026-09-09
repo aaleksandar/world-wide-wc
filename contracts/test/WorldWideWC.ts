@@ -157,6 +157,37 @@ describe("WorldWideWC rewards", () => {
     await assert.rejects(asAlice.write.setRelayer([alice]), /OwnableUnauthorizedAccount/);
   });
 
+  it("lets anyone log a toilet themselves, no relayer involved", async () => {
+    const { wc } = await deploy();
+    const wallets = await viem.getWalletClients();
+    const asAlice = await viem.getContractAt("WorldWideWC", wc.address, {
+      client: { wallet: wallets[2] },
+    });
+
+    await asAlice.write.log([LONDON_LAT, LONDON_LNG, "{}"]);
+
+    // Credited to the sender, at full human weight, with nobody in between.
+    assert.equal(await wc.read.weightOf([alice]), 10n);
+    assert.equal(await wc.read.balanceOf([alice]), parseEther("10"));
+    assert.equal(await wc.read.toiletCount(), 1n);
+  });
+
+  it("never lets the relayer touch the reward pool", async () => {
+    const { wc, asRelayer } = await deploy();
+    const publicClient = await viem.getPublicClient();
+
+    await log(asRelayer, alice);
+    await wc.write.donate(["for alice"], { value: parseEther("1") });
+
+    // The relayer earned no weight by relaying, so it can claim nothing...
+    assert.equal(await wc.read.weightOf([relayer]), 0n);
+    assert.equal(await wc.read.pendingOf([relayer]), 0n);
+
+    // ...and the donation is still sitting in the contract, owed to alice.
+    assert.equal(await publicClient.getBalance({ address: wc.address }), parseEther("1"));
+    assert.equal(await wc.read.pendingOf([alice]), parseEther("1"));
+  });
+
   it("rejects a rating for a toilet that does not exist", async () => {
     const { asRelayer } = await deploy();
     await assert.rejects(asRelayer.write.rateFor([1n, alice, "{}"]), /NoSuchToilet/);

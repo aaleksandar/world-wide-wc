@@ -1,10 +1,13 @@
-import "server-only";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { chain, contractAddress, rpcUrl } from "./chain";
 import { wwwcAbi } from "./wwwc-abi";
 
 /**
+ * Server and scripts only — never import this into a client component. The private key
+ * is not NEXT_PUBLIC_, so a browser would get `undefined` and throw, but the guard below
+ * says so plainly rather than failing three frames deep in viem.
+ *
  * The wallet that pays gas so contributors don't have to. It holds nothing but faucet ETH
  * and its only power is calling logFor/rateFor — it cannot move donations, and it cannot
  * change who the relayer is. That authority stays with the contract owner.
@@ -16,6 +19,10 @@ let cached: ReturnType<typeof createWalletClient> | null = null;
 
 export function relayerClient() {
   if (cached) return cached;
+
+  if (typeof window !== "undefined") {
+    throw new Error("relayerClient() is server-side only");
+  }
 
   const key = process.env.RELAYER_PRIVATE_KEY as `0x${string}` | undefined;
   if (!key || key === "0x") throw new Error("RELAYER_PRIVATE_KEY is not set");
