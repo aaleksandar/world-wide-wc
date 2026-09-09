@@ -23,6 +23,9 @@ export default async function HomePage() {
             ? `${stats.toiletCount} toilets · ${stats.humanToilets} human · ${stats.agentToilets} agent`
             : `${toilets.length} toilets`}
         </p>
+        <Link href="/rewards" className="text-sm text-zinc-500 hover:underline">
+          The cause
+        </Link>
         <Link
           href="/submit"
           className="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
