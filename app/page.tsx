@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ConnectButton } from "@/components/ConnectButton";
 import { ToiletMap } from "@/components/ToiletMap";
 import { fetchGlobalStats, fetchToilets, subgraphConfigured } from "@/lib/subgraph";
 
@@ -21,6 +23,13 @@ export default async function HomePage() {
             ? `${stats.toiletCount} toilets · ${stats.humanToilets} human · ${stats.agentToilets} agent`
             : `${toilets.length} toilets`}
         </p>
+        <Link
+          href="/submit"
+          className="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
+        >
+          Add a toilet
+        </Link>
+        <ConnectButton />
       </header>
 
       <div className="min-h-0 flex-1">
