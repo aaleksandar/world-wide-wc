@@ -25,6 +25,11 @@ type Toilet @entity(immutable: false) {
   hasBidet: Boolean!
   isStaffed: Boolean!
   hasMusic: Boolean!
+  "Step-free access. For a lot of people this is the only attribute that matters."
+  isAccessible: Boolean!
+  hasChangingTable: Boolean!
+  "OSM-style opening hours, e.g. \"Mo-Su 10:00-20:00\" or \"24/7\"."
+  openingHours: String!
   style: String!
   photoUrl: String!
 

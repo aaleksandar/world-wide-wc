@@ -2,7 +2,7 @@
   "name": "@world-wide-wc/subgraph",
   "private": true,
   "scripts": {
-    "prepare:manifest": "cd .. && tsx scripts/build-manifest.ts",
+    "prepare:manifest": "cd .. && tsx scripts/build-manifest.mts",
     "codegen": "npm run prepare:manifest && graph codegen",
     "build": "npm run codegen && graph build",
     "deploy": "npm run build && graph deploy world-wide-wc"

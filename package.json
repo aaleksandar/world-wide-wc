@@ -9,8 +9,9 @@
     "lint": "eslint",
     "contracts:build": "npm --prefix contracts run build",
     "contracts:test": "npm --prefix contracts test",
-    "sync:abi": "tsx scripts/sync-abi.ts",
-    "deploy": "tsx scripts/deploy.ts"
+    "sync:abi": "tsx scripts/sync-abi.mts",
+    "deploy": "tsx scripts/deploy.mts",
+    "harvest": "tsx scripts/harvest.mts"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.11",

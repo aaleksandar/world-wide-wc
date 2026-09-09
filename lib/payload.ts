@@ -33,6 +33,12 @@ export type Toilet = {
   hasBidet: boolean;
   isStaffed: boolean;
   hasMusic: boolean;
+  /** Step-free access. For a lot of people this is the only attribute that matters. */
+  isAccessible: boolean;
+  /** Has a baby changing table. */
+  hasChangingTable: boolean;
+  /** OSM-style opening hours, e.g. "Mo-Su 10:00-20:00" or "24/7". */
+  openingHours: string;
   /** Free text — "art deco tiling", "smells of pine", "there is a chandelier". */
   style: string;
   photoUrl: string;
@@ -54,6 +60,9 @@ export const emptyToilet: Toilet = {
   hasBidet: false,
   isStaffed: false,
   hasMusic: false,
+  isAccessible: false,
+  hasChangingTable: false,
+  openingHours: "",
   style: "",
   photoUrl: "",
   source: "human",
@@ -74,6 +83,9 @@ const KEYS = {
   hasBidet: "bi",
   isStaffed: "st",
   hasMusic: "mu",
+  isAccessible: "wh",
+  hasChangingTable: "ch",
+  openingHours: "oh",
   style: "sy",
   photoUrl: "ph",
   source: "src",
@@ -125,6 +137,9 @@ export function decodePayload(payload: string): Toilet {
     hasBidet: bool(KEYS.hasBidet),
     isStaffed: bool(KEYS.isStaffed),
     hasMusic: bool(KEYS.hasMusic),
+    isAccessible: bool(KEYS.isAccessible),
+    hasChangingTable: bool(KEYS.hasChangingTable),
+    openingHours: str(KEYS.openingHours),
     style: str(KEYS.style),
     photoUrl: str(KEYS.photoUrl),
     source: SOURCE.includes(source) ? source : "human",

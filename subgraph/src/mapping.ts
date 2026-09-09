@@ -36,6 +36,9 @@ const K_PAPER = "pa";
 const K_BIDET = "bi";
 const K_STAFFED = "st";
 const K_MUSIC = "mu";
+const K_ACCESSIBLE = "wh";
+const K_CHANGING = "ch";
+const K_OPENING_HOURS = "oh";
 const K_STYLE = "sy";
 const K_PHOTO = "ph";
 const K_SOURCE = "src";
@@ -165,6 +168,9 @@ export function handleToiletLogged(event: ToiletLogged): void {
   toilet.hasBidet = readBool(payload, K_BIDET);
   toilet.isStaffed = readBool(payload, K_STAFFED);
   toilet.hasMusic = readBool(payload, K_MUSIC);
+  toilet.isAccessible = readBool(payload, K_ACCESSIBLE);
+  toilet.hasChangingTable = readBool(payload, K_CHANGING);
+  toilet.openingHours = readString(payload, K_OPENING_HOURS);
   toilet.style = readString(payload, K_STYLE);
   toilet.photoUrl = readString(payload, K_PHOTO);
 
