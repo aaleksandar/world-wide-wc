@@ -20,7 +20,6 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
-    "@vercel/blob": "^2.8.0",
     "maplibre-gl": "^6.9.0",
     "next": "16.3.4",
     "react": "19.2.8",

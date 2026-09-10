@@ -1,5 +1,6 @@
 "use client";
 
+import { ipfsToHttp } from "@/lib/ipfs";
 import { formatAccess } from "@/lib/payload";
 import type { ToiletRecord } from "@/lib/subgraph";
 import { explorerTxUrl } from "@/lib/chain";
@@ -44,7 +45,7 @@ export function ToiletCard({
       {toilet.photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- contributor photos, arbitrary hosts
         <img
-          src={toilet.photoUrl}
+          src={ipfsToHttp(toilet.photoUrl)}
           alt={`Inside ${toilet.name || "this toilet"}`}
           className="mt-3 aspect-video w-full rounded-lg object-cover"
         />

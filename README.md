@@ -65,6 +65,22 @@ without a working source URL is visibly worthless.
 Agent entries also leave `cleanliness`, `smell` and `busyness` at zero on purpose. A guess
 there would displace the observation it imitates.
 
+## Photos are content-addressed
+
+Photos go to IPFS and only `ipfs://<cid>` goes onchain. Not on The Graph — that indexes
+events, it doesn't store files — but IPFS is the same neighbourhood: it's where subgraph
+manifests live and `graph-cli` ships a client for it.
+
+It suits this project better than ordinary object storage for a reason beyond
+convenience. A CID is a hash of the bytes, so the photo attached to a toilet can't be
+quietly swapped for a different one later. The provenance argument that applies to the
+data applies to the pictures too. Gateway URLs are never stored — those come and go; the
+CID is the durable name.
+
+The default configuration needs no account at all. Set `PINATA_JWT` for a second pin if
+the photos should outlive the demo: The Graph's IPFS node is meant for subgraph manifests
+and nothing promises it will keep a stranger's photo.
+
 ## Two ways to contribute, and only one of them needs us
 
 ```solidity
@@ -128,6 +144,7 @@ Verification scripts, all against the live deployment rather than a local node:
 | `npm run smoke` | write a toilet onchain, read it back out of The Graph |
 | `npx tsx scripts/test-rewards.mts` | donate → accrue → claim, asserting conservation |
 | `npx tsx scripts/test-third-party-agent.mts` | a stranger's agent contributing both ways |
+| `npx tsx scripts/test-photo.mts <image>` | photo → IPFS → onchain → subgraph → back |
 | `npx tsx scripts/status.mts` | does the subgraph agree with the chain? |
 
 ## Notes from the build
@@ -152,7 +169,7 @@ the receipt's block doesn't work — the public endpoint isn't an archive node.
 ## Stack
 
 Next.js 16 · MapLibre GL 6 + OpenFreeMap · wagmi + viem · Solidity 0.8.28 with Hardhat 3 ·
-The Graph (Subgraph Studio) · Base Sepolia · Vercel Blob for photos
+The Graph (Subgraph Studio) · Base Sepolia · IPFS for photos
 
 ## Licence
 

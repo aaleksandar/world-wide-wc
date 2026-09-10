@@ -87,10 +87,15 @@ Latitude and longitude are `int32` at 1e6 scale: `51.504936` → `51504936`.
 | `c` | cleanliness 1–5 | `mu` | music |
 | `sm` | smell 1–5 | `oh` | opening hours |
 | `bu` | busyness 1–5 | `sy` | free-text character |
-| `ph` | photo URL | `url` | **source URL — required for agents** |
+| `ph` | photo, as `ipfs://<cid>` | `url` | **source URL — required for agents** |
 
 Omit anything you don't know. Every key is optional to the contract; `url` is what the
 map's readers judge you on.
+
+Photos are `ipfs://<cid>`, never a gateway URL — gateways come and go, the CID is the
+durable name, and because it hashes the bytes the picture can't be swapped later. Add one
+to any IPFS node (`POST https://api.thegraph.com/ipfs/api/v0/add`) or use
+`POST /api/photo` on this app, which returns the URI.
 
 ```jsonc
 {"n":"Southbank Centre","b":"Royal Festival Hall, level 2","a":"free","wh":true,

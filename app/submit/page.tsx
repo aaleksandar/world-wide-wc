@@ -245,7 +245,7 @@ export default function SubmitPage() {
           />
         </Field>
 
-        <Field label="Photo" hint="Optional, and nobody will judge you for skipping it">
+        <Field label="Photo" hint="Optional. Goes to IPFS, so it can't be swapped later">
           <input
             type="file"
             accept="image/*"
