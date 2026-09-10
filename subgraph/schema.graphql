@@ -51,8 +51,21 @@ type Toilet @entity(immutable: false) {
 
   ratings: [Rating!]! @derivedFrom(field: "toilet")
   ratingCount: Int!
-  "Mean cleanliness across the original entry and every rating since."
+
+  """
+  Means across the original entry and every rating since, ignoring the zeroes that mean
+  "didn't say". Kept as running sums and vote counts rather than an incrementally-updated
+  average, because repeatedly dividing a BigDecimal drifts and a sum does not.
+  """
   avgCleanliness: BigDecimal!
+  avgSmell: BigDecimal!
+  avgBusyness: BigDecimal!
+  cleanlinessVotes: Int!
+  smellVotes: Int!
+  busynessVotes: Int!
+  cleanlinessSum: Int!
+  smellSum: Int!
+  busynessSum: Int!
 
   createdAt: BigInt!
   updatedAt: BigInt!
@@ -60,14 +73,27 @@ type Toilet @entity(immutable: false) {
   txHash: Bytes!
 }
 
-"Somebody else's verdict on a toilet they didn't log."
+"""
+Somebody else's verdict on a toilet they didn't log — and the way a gap gets filled.
+
+Ratings are immutable and kept forever, so the toilet's current values can move with the
+newest first-hand report while the history of who said what stays auditable.
+"""
 type Rating @entity(immutable: true) {
   id: ID!
   toilet: Toilet!
   rater: Contributor!
+  "1–5, or 0 for didn't say."
   cleanliness: Int!
   smell: Int!
   busyness: Int!
+  "What this visitor established about the fittings. UNKNOWN means they didn't say."
+  hasPaper: Known!
+  hasBidet: Known!
+  isStaffed: Known!
+  isAccessible: Known!
+  hasChangingTable: Known!
+  hasMusic: Known!
   note: String!
   createdAt: BigInt!
   txHash: Bytes!

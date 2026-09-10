@@ -171,22 +171,45 @@ function addWeight(contributor: Contributor, weight: i32): void {
 }
 
 /**
- * Mean cleanliness over the original entry and every rating since, ignoring the zeroes
- * that mean "didn't say". Recomputed incrementally: a `sum / count` kept on the entity
- * would need two more fields to say the same thing.
+ * Folds one 1-5 reading into a toilet's running average, ignoring the zeroes that mean
+ * "didn't say". Sums and counts are stored rather than an incrementally-updated average,
+ * because dividing a BigDecimal over and over drifts and adding integers does not.
  */
-function recomputeCleanliness(toilet: Toilet, incoming: i32): void {
+function addScore(toilet: Toilet, which: string, incoming: i32): void {
   if (incoming <= 0) return;
-  const previousCount = toilet.avgCleanliness.equals(BigDecimal.zero())
-    ? 0
-    : toilet.ratingCount;
-  const previousTotal = toilet.avgCleanliness.times(
-    BigDecimal.fromString(previousCount.toString()),
-  );
-  const newCount = previousCount + 1;
-  toilet.avgCleanliness = previousTotal
-    .plus(BigDecimal.fromString(incoming.toString()))
-    .div(BigDecimal.fromString(newCount.toString()));
+
+  if (which == "cleanliness") {
+    toilet.cleanlinessSum += incoming;
+    toilet.cleanlinessVotes += 1;
+    toilet.avgCleanliness = BigDecimal.fromString(toilet.cleanlinessSum.toString()).div(
+      BigDecimal.fromString(toilet.cleanlinessVotes.toString()),
+    );
+  } else if (which == "smell") {
+    toilet.smellSum += incoming;
+    toilet.smellVotes += 1;
+    toilet.avgSmell = BigDecimal.fromString(toilet.smellSum.toString()).div(
+      BigDecimal.fromString(toilet.smellVotes.toString()),
+    );
+  } else {
+    toilet.busynessSum += incoming;
+    toilet.busynessVotes += 1;
+    toilet.avgBusyness = BigDecimal.fromString(toilet.busynessSum.toString()).div(
+      BigDecimal.fromString(toilet.busynessVotes.toString()),
+    );
+  }
+}
+
+/**
+ * A later first-hand report replaces an earlier one.
+ *
+ * Staleness is half of what makes existing toilet data useless — a roll of paper present
+ * last year says nothing about today. So the toilet carries the newest definite answer,
+ * while every Rating is kept immutably, which means the history of who said what and when
+ * survives even though the headline value moves. A visitor who says nothing about a field
+ * (UNKNOWN) never erases what somebody else established.
+ */
+function applyKnown(existing: string, incoming: string): string {
+  return incoming == "UNKNOWN" ? existing : incoming;
 }
 
 // --- handlers ---------------------------------------------------------------
@@ -230,7 +253,19 @@ export function handleToiletLogged(event: ToiletLogged): void {
 
   toilet.ratingCount = 0;
   toilet.avgCleanliness = BigDecimal.zero();
-  recomputeCleanliness(toilet, toilet.cleanliness);
+  toilet.avgSmell = BigDecimal.zero();
+  toilet.avgBusyness = BigDecimal.zero();
+  toilet.cleanlinessVotes = 0;
+  toilet.smellVotes = 0;
+  toilet.busynessVotes = 0;
+  toilet.cleanlinessSum = 0;
+  toilet.smellSum = 0;
+  toilet.busynessSum = 0;
+
+  // The original contributor's own reading is the first vote.
+  addScore(toilet, "cleanliness", toilet.cleanliness);
+  addScore(toilet, "smell", toilet.smell);
+  addScore(toilet, "busyness", toilet.busyness);
 
   toilet.createdAt = event.block.timestamp;
   toilet.updatedAt = event.block.timestamp;
@@ -272,12 +307,33 @@ export function handleToiletRated(event: ToiletRated): void {
   rating.cleanliness = readInt(payload, K_CLEANLINESS);
   rating.smell = readInt(payload, K_SMELL);
   rating.busyness = readInt(payload, K_BUSYNESS);
+  rating.hasPaper = readKnown(payload, K_PAPER);
+  rating.hasBidet = readKnown(payload, K_BIDET);
+  rating.isStaffed = readKnown(payload, K_STAFFED);
+  rating.isAccessible = readKnown(payload, K_ACCESSIBLE);
+  rating.hasChangingTable = readKnown(payload, K_CHANGING);
+  rating.hasMusic = readKnown(payload, K_MUSIC);
   rating.note = readString(payload, K_NOTE);
   rating.createdAt = event.block.timestamp;
   rating.txHash = event.transaction.hash;
   rating.save();
 
-  recomputeCleanliness(toilet, rating.cleanliness);
+  addScore(toilet, "cleanliness", rating.cleanliness);
+  addScore(toilet, "smell", rating.smell);
+  addScore(toilet, "busyness", rating.busyness);
+
+  toilet.hasPaper = applyKnown(toilet.hasPaper, rating.hasPaper);
+  toilet.hasBidet = applyKnown(toilet.hasBidet, rating.hasBidet);
+  toilet.isStaffed = applyKnown(toilet.isStaffed, rating.isStaffed);
+  toilet.isAccessible = applyKnown(toilet.isAccessible, rating.isAccessible);
+  toilet.hasChangingTable = applyKnown(toilet.hasChangingTable, rating.hasChangingTable);
+  toilet.hasMusic = applyKnown(toilet.hasMusic, rating.hasMusic);
+
+  // A visitor who describes the place fills in a blank character note, but never
+  // overwrites what the original contributor wrote.
+  const note = readString(payload, K_NOTE);
+  if (toilet.style == "" && note != "") toilet.style = note;
+
   toilet.ratingCount += 1;
   toilet.updatedAt = event.block.timestamp;
   toilet.save();

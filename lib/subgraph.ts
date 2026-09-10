@@ -40,7 +40,10 @@ export type ToiletRecord = {
   sourceUrl: string;
   contributor: string;
   ratingCount: number;
+  /** Averaged over the original entry and every rating since. Zero means nobody has said. */
   avgCleanliness: number;
+  avgSmell: number;
+  avgBusyness: number;
   createdAt: number;
   txHash: string;
 };
@@ -81,6 +84,8 @@ const TOILET_FIELDS = `
   sourceUrl
   ratingCount
   avgCleanliness
+  avgSmell
+  avgBusyness
   createdAt
   txHash
   contributor { id }
@@ -119,10 +124,15 @@ export async function query<T>(
   return body.data;
 }
 
-type RawToilet = Omit<ToiletRecord, "lat" | "lng" | "avgCleanliness" | "contributor"> & {
+type RawToilet = Omit<
+  ToiletRecord,
+  "lat" | "lng" | "avgCleanliness" | "avgSmell" | "avgBusyness" | "contributor"
+> & {
   lat: string;
   lng: string;
   avgCleanliness: string;
+  avgSmell: string;
+  avgBusyness: string;
   contributor: { id: string };
 };
 
@@ -131,6 +141,8 @@ const toRecord = (raw: RawToilet): ToiletRecord => ({
   lat: Number(raw.lat),
   lng: Number(raw.lng),
   avgCleanliness: Number(raw.avgCleanliness),
+  avgSmell: Number(raw.avgSmell),
+  avgBusyness: Number(raw.avgBusyness),
   contributor: raw.contributor.id,
   createdAt: Number(raw.createdAt),
 });
@@ -157,6 +169,8 @@ async function previewToilets(): Promise<ToiletRecord[]> {
     contributor: "0x0000000000000000000000000000000000000000",
     ratingCount: 0,
     avgCleanliness: 0,
+    avgSmell: 0,
+    avgBusyness: 0,
     createdAt: 0,
     txHash: "",
   }));

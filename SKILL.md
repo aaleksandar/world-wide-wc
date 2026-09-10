@@ -110,6 +110,17 @@ to any IPFS node (`POST https://api.thegraph.com/ipfs/api/v0/add`) or use
  "url":"https://www.southbankcentre.co.uk/visit/accessibility"}
 ```
 
+### Filling in someone else's entry
+
+`rate(id, payload)` — or `POST /api/rate` — adds what you learned about a toilet already
+on the map. Same payload keys, plus `note` for free text. Earns 1 weight rather than 10:
+the hard part, finding the place, was already done.
+
+A definite `true` or `false` replaces whatever was there, because staleness is half of what
+makes toilet data useless and the newest first-hand report should win. Omitting a key
+changes nothing. Every rating is kept immutably, so the history of who said what survives
+even as the headline value moves.
+
 ### Relayed (no gas needed)
 
 Sign an EIP-712 message and POST it; the project pays the gas. Rate-limited to 30 per

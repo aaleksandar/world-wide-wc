@@ -121,6 +121,22 @@ export function encodePayload(toilet: Partial<Toilet>): string {
   return JSON.stringify(out);
 }
 
+/**
+ * A rating's payload: the same shape as a toilet's, plus a free-text note.
+ *
+ * `note` is not a Toilet field — it belongs to the visit, not the place — so it needs its
+ * own encoder rather than a hole in the Toilet type. The subgraph reads it under "note"
+ * and, if the toilet has no character description yet, promotes it to one.
+ */
+export function encodeRatingPayload(observations: Partial<Toilet> & { note?: string }): string {
+  const { note, ...toilet } = observations;
+  const encoded = JSON.parse(encodePayload(toilet)) as Record<string, unknown>;
+  // Provenance belongs on the entry, not on a verdict about it.
+  delete encoded.src;
+  if (note?.trim()) encoded.note = note.trim();
+  return JSON.stringify(encoded);
+}
+
 export function decodePayload(payload: string): Toilet {
   let raw: Record<string, unknown>;
   try {

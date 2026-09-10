@@ -31,7 +31,9 @@ publish what it found: location, access, price, opening hours, step-free access.
 declare itself an agent and attach the URL it read.
 
 **People make it trustworthy.** Somebody standing in the toilet can say the things
-software cannot: is it clean, does it smell, is there paper, is there a queue.
+software cannot: is it clean, does it smell, is there paper, is there a queue. Any entry
+on the map can be filled in by whoever visits next — the card lists what nobody has
+answered and the form asks only those questions.
 
 **Donations flow to both.** Anyone can donate to the toilet cause. Every donation splits
 across all contributors in proportion to what they contributed, claimable whenever they

@@ -4,6 +4,8 @@ import { explorerTxUrl } from "@/lib/chain";
 import { ipfsToHttp } from "@/lib/ipfs";
 import { formatAccess } from "@/lib/payload";
 import type { Known, ToiletRecord } from "@/lib/subgraph";
+import { useState } from "react";
+import { AddWhatYouKnow } from "./AddWhatYouKnow";
 import { Stars } from "./Stars";
 
 const SCALE_WORDS: Record<string, [string, string, string, string, string]> = {
@@ -21,6 +23,7 @@ const SCALE_WORDS: Record<string, [string, string, string, string, string]> = {
  * and reads as an invitation rather than an answer.
  */
 export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose: () => void }) {
+  const [adding, setAdding] = useState(false);
   const amenities: [string, string, Known][] = [
     ["paper", "no paper", toilet.hasPaper],
     ["bidet", "no bidet", toilet.hasBidet],
@@ -30,10 +33,12 @@ export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose:
     ["music", "no music", toilet.hasMusic],
   ];
 
+  // Averages, not the original contributor's own reading: once somebody else has been,
+  // their visit counts too.
   const scales: [string, string, number][] = [
-    ["Cleanliness", "cleanliness", toilet.avgCleanliness || toilet.cleanliness],
-    ["Smell", "smell", toilet.smell],
-    ["Busyness", "busyness", toilet.busyness],
+    ["Cleanliness", "cleanliness", toilet.avgCleanliness],
+    ["Smell", "smell", toilet.avgSmell],
+    ["Busyness", "busyness", toilet.avgBusyness],
   ];
 
   const unknownAmenities = amenities.filter(([, , state]) => state === "UNKNOWN");
@@ -102,14 +107,29 @@ export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose:
         ))}
       </ul>
 
-      {missing > 0 ? (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-          {missing} {missing === 1 ? "thing is" : "things are"} unrecorded here.{" "}
-          {toilet.source === "agent"
-            ? "An agent found this one, and no agent can tell you whether it smells."
-            : "Add what you know next time you're in."}
-        </p>
-      ) : null}
+      {adding ? (
+        <AddWhatYouKnow toilet={toilet} onDone={() => setAdding(false)} />
+      ) : (
+        <div className="mt-3">
+          {missing > 0 ? (
+            <p className="rounded-t-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+              {missing} {missing === 1 ? "thing is" : "things are"} unrecorded here.{" "}
+              {toilet.source === "agent"
+                ? "An agent found this one, and no agent can tell you whether it smells."
+                : "Only someone who has been can say."}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className={`w-full bg-zinc-900 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 ${
+              missing > 0 ? "rounded-b-lg" : "rounded-lg"
+            }`}
+          >
+            {missing > 0 ? "Add what you know" : "Something changed?"}
+          </button>
+        </div>
+      )}
 
       <footer className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-zinc-200 pt-3 text-xs text-zinc-500 dark:border-zinc-800">
         <span
