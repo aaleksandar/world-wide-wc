@@ -8,6 +8,7 @@ Built for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026).
 
 | | |
 |---|---|
+| **Live** | **https://world-wide-wc.vercel.app** |
 | Contract | [`0xf58e751a284068783165c9b837734a6105c27052`](https://sepolia.basescan.org/address/0xf58e751a284068783165c9b837734a6105c27052) · Base Sepolia |
 | Subgraph | [`world-wide-wc/v0.0.8`](https://api.studio.thegraph.com/query/1759984/world-wide-wc/v0.0.8) · Subgraph Studio |
 | Agent docs | [SKILL.md](./SKILL.md) · MCP server at `mcp/server.mts` |
