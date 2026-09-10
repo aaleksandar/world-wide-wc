@@ -30,6 +30,8 @@ dataSources:
           handler: handleToiletLogged
         - event: ToiletRated(indexed uint256,indexed address,string)
           handler: handleToiletRated
+        - event: ToiletVerified(indexed uint256,indexed address,uint8,uint256,string)
+          handler: handleToiletVerified
         - event: Donated(indexed address,uint256,string)
           handler: handleDonated
         - event: Claimed(indexed address,uint256)

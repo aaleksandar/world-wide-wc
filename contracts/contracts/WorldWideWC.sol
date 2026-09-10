@@ -30,6 +30,16 @@ contract WorldWideWC is Ownable, ReentrancyGuard {
     /// @notice Weight earned for rating a toilet someone else logged.
     uint256 public constant WEIGHT_RATING = 1;
 
+    /// @notice Bonus weight when a judge finds the source fresh and corroborating. Takes
+    ///         an agent entry from 3 to 10 — exactly human parity. An entry starts low
+    ///         because nobody checked it; proving the source is how it earns the rest.
+    uint256 public constant WEIGHT_VERIFIED_HIGH = 7;
+    /// @notice Bonus when the source is valid but stale.
+    uint256 public constant WEIGHT_VERIFIED_MEDIUM = 2;
+
+    uint8 public constant SCORE_HIGH = 80;
+    uint8 public constant SCORE_MEDIUM = 40;
+
     /// @notice Address permitted to submit on a contributor's behalf, so contributors
     ///         never need gas. It verifies their signature offchain before relaying.
     address public relayer;
@@ -52,6 +62,15 @@ contract WorldWideWC is Ownable, ReentrancyGuard {
     mapping(address contributor => uint256) private accrued;
     mapping(address contributor => uint256) public claimedOf;
 
+    /// @notice Who logged each toilet. Needed to pay a verification bonus to the right
+    ///         person; previously this only ever existed in an event.
+    mapping(uint256 toiletId => address) public contributorOf;
+    /// @notice The judge's most recent score, 0-100.
+    mapping(uint256 toiletId => uint8) public verificationOf;
+    /// @notice Bonus weight already granted for this toilet, so re-verifying pays only
+    ///         the difference and the same evidence cannot be farmed twice.
+    mapping(uint256 toiletId => uint256) public bonusOf;
+
     event ToiletLogged(
         uint256 indexed id,
         address indexed contributor,
@@ -61,6 +80,9 @@ contract WorldWideWC is Ownable, ReentrancyGuard {
         string payload
     );
     event ToiletRated(uint256 indexed id, address indexed rater, string payload);
+    event ToiletVerified(
+        uint256 indexed id, address indexed contributor, uint8 score, uint256 bonus, string evidence
+    );
     event Donated(address indexed donor, uint256 amount, string note);
     event Claimed(address indexed contributor, uint256 amount);
     event RelayerChanged(address indexed relayer);
@@ -141,6 +163,7 @@ contract WorldWideWC is Ownable, ReentrancyGuard {
         bool isAgent
     ) internal returns (uint256 id) {
         id = ++toiletCount;
+        contributorOf[id] = contributor;
         _addWeight(contributor, isAgent ? WEIGHT_AGENT_LOG : WEIGHT_HUMAN_LOG);
         emit ToiletLogged(id, contributor, lat, lng, isAgent, payload);
     }
@@ -149,6 +172,37 @@ contract WorldWideWC is Ownable, ReentrancyGuard {
         if (id == 0 || id > toiletCount) revert NoSuchToilet();
         _addWeight(rater, WEIGHT_RATING);
         emit ToiletRated(id, rater, payload);
+    }
+
+    /// @notice Record a judge's verdict on the source behind a toilet, and pay the
+    ///         contributor the weight that verdict earns them.
+    /// @param score 0-100. Below 40 earns nothing; 40-79 is a stale but valid source;
+    ///        80 and above is fresh and corroborating.
+    /// @param evidence A short, human-readable justification. It goes onchain precisely
+    ///        so every verdict is publicly auditable — the judge is relayer-gated, which
+    ///        is a real centralisation point, and this is what keeps it answerable.
+    ///
+    /// Only ever pays the difference between what this score earns and what has already
+    /// been granted, and never takes weight away. That keeps `_addWeight` increase-only,
+    /// so the reward accumulator needs no special handling and nobody can lose ETH they
+    /// have already accrued because a judge changed its mind.
+    function verify(uint256 id, uint8 score, string calldata evidence) external onlyRelayer {
+        if (id == 0 || id > toiletCount) revert NoSuchToilet();
+
+        uint256 earned =
+            score >= SCORE_HIGH ? WEIGHT_VERIFIED_HIGH : score >= SCORE_MEDIUM ? WEIGHT_VERIFIED_MEDIUM : 0;
+        uint256 already = bonusOf[id];
+
+        verificationOf[id] = score;
+
+        uint256 bonus = 0;
+        if (earned > already) {
+            bonus = earned - already;
+            bonusOf[id] = earned;
+            _addWeight(contributorOf[id], bonus);
+        }
+
+        emit ToiletVerified(id, contributorOf[id], score, bonus, evidence);
     }
 
     // --- money in -----------------------------------------------------------

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { before, describe, it } from "node:test";
 import { network } from "hardhat";
-import { parseEther } from "viem";
+import { getAddress, parseEther } from "viem";
 
 /**
  * These tests are all about the reward accumulator. Everything else the contract does is
@@ -199,6 +199,115 @@ describe("WorldWideWC rewards", () => {
     // ...and the donation is still sitting in the contract, owed to alice.
     assert.equal(await publicClient.getBalance({ address: wc.address }), parseEther("1"));
     assert.equal(await wc.read.pendingOf([alice]), parseEther("1"));
+  });
+
+  describe("verification bonus", () => {
+    it("pays human parity for a fresh, corroborating source", async () => {
+      const { wc, asRelayer } = await deploy();
+      await log(asRelayer, alice, true); // an agent entry: weight 3
+
+      await asRelayer.write.verify([1n, 92, "source surveyed 12 days ago, all claims corroborated"]);
+
+      // 3 + 7 = 10, exactly what a person who stood there would have earned.
+      assert.equal(await wc.read.weightOf([alice]), 10n);
+      assert.equal(await wc.read.bonusOf([1n]), 7n);
+      assert.equal(await wc.read.verificationOf([1n]), 92);
+    });
+
+    it("pays less for a stale but valid source", async () => {
+      const { wc, asRelayer } = await deploy();
+      await log(asRelayer, alice, true);
+      await asRelayer.write.verify([1n, 55, "source valid but last surveyed 1833 days ago"]);
+      assert.equal(await wc.read.weightOf([alice]), 5n); // 3 + 2
+    });
+
+    it("pays nothing for a dead or contradicted source", async () => {
+      const { wc, asRelayer } = await deploy();
+      await log(asRelayer, alice, true);
+      await asRelayer.write.verify([1n, 10, "deleted from OpenStreetMap"]);
+
+      assert.equal(await wc.read.weightOf([alice]), 3n); // unchanged
+      assert.equal(await wc.read.bonusOf([1n]), 0n);
+      // The verdict is still recorded, so the map can show it.
+      assert.equal(await wc.read.verificationOf([1n]), 10);
+    });
+
+    it("cannot be farmed by verifying the same entry twice", async () => {
+      const { wc, asRelayer } = await deploy();
+      await log(asRelayer, alice, true);
+
+      await asRelayer.write.verify([1n, 90, "fresh"]);
+      await asRelayer.write.verify([1n, 95, "still fresh"]);
+      await asRelayer.write.verify([1n, 99, "very fresh"]);
+
+      assert.equal(await wc.read.weightOf([alice]), 10n); // paid once, not three times
+    });
+
+    it("pays only the difference when a later verdict is kinder", async () => {
+      const { wc, asRelayer } = await deploy();
+      await log(asRelayer, alice, true);
+
+      await asRelayer.write.verify([1n, 50, "stale"]);
+      assert.equal(await wc.read.weightOf([alice]), 5n); // 3 + 2
+
+      await asRelayer.write.verify([1n, 90, "resurveyed, now fresh"]);
+      assert.equal(await wc.read.weightOf([alice]), 10n); // 3 + 7, not 3 + 2 + 7
+      assert.equal(await wc.read.bonusOf([1n]), 7n);
+    });
+
+    it("never takes weight back when a later verdict is harsher", async () => {
+      const { wc, asRelayer } = await deploy();
+      await log(asRelayer, alice, true);
+
+      await asRelayer.write.verify([1n, 95, "fresh"]);
+      await asRelayer.write.verify([1n, 5, "source has since been deleted"]);
+
+      // Rewards already accrued against that weight must not evaporate underneath someone.
+      assert.equal(await wc.read.weightOf([alice]), 10n);
+      assert.equal(await wc.read.verificationOf([1n]), 5); // but the verdict is recorded
+    });
+
+    it("credits the original contributor, not whoever triggered the judge", async () => {
+      const { wc, asRelayer } = await deploy();
+      await log(asRelayer, carol, true);
+
+      await asRelayer.write.verify([1n, 90, "fresh"]);
+
+      assert.equal(await wc.read.weightOf([carol]), 10n);
+      assert.equal(await wc.read.weightOf([relayer]), 0n);
+      assert.equal(await wc.read.contributorOf([1n]), getAddress(carol));
+    });
+
+    it("only lets the relayer deliver a verdict", async () => {
+      const { wc, asRelayer } = await deploy();
+      await log(asRelayer, alice, true);
+      await assert.rejects(wc.write.verify([1n, 90, "self-serving"]), /NotRelayer/);
+    });
+
+    it("rejects a verdict on a toilet that does not exist", async () => {
+      const { asRelayer } = await deploy();
+      await assert.rejects(asRelayer.write.verify([1n, 90, "nothing here"]), /NoSuchToilet/);
+    });
+
+    it("keeps donations conserved when a bonus lands mid-stream", async () => {
+      const { wc, asRelayer } = await deploy();
+      const publicClient = await viem.getPublicClient();
+
+      await log(asRelayer, alice, true); // 3
+      await log(asRelayer, bob); // 10
+      await wc.write.donate(["before"], { value: parseEther("1") });
+      await asRelayer.write.verify([1n, 90, "fresh"]); // alice 3 -> 10
+      await wc.write.donate(["after"], { value: parseEther("1") });
+
+      const owed =
+        (await wc.read.pendingOf([alice])) + (await wc.read.pendingOf([bob]));
+      const donated = await wc.read.totalDonated();
+      const pending = await wc.read.poolPending();
+
+      // The invariant that caught the original wei leak must survive a weight bonus.
+      assert.equal(owed + pending, donated);
+      assert.equal(await publicClient.getBalance({ address: wc.address }), donated);
+    });
   });
 
   it("rejects a rating for a toilet that does not exist", async () => {

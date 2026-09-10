@@ -12,6 +12,7 @@ import {
   Donated,
   ToiletLogged,
   ToiletRated,
+  ToiletVerified,
 } from "../generated/WorldWideWC/WorldWideWC";
 import { Contributor, Donation, Global, Rating, Toilet } from "../generated/schema";
 
@@ -100,6 +101,7 @@ function loadGlobal(): Global {
     global.totalClaimed = BigInt.zero();
     global.accPerWeight = BigInt.zero();
     global.poolPending = BigInt.zero();
+    global.verifiedCount = 0;
   }
   return global as Global;
 }
@@ -267,6 +269,11 @@ export function handleToiletLogged(event: ToiletLogged): void {
   addScore(toilet, "smell", toilet.smell);
   addScore(toilet, "busyness", toilet.busyness);
 
+  toilet.verificationScore = 0;
+  toilet.verificationBand = "unchecked";
+  toilet.verificationEvidence = "";
+  toilet.weightBonus = 0;
+
   toilet.createdAt = event.block.timestamp;
   toilet.updatedAt = event.block.timestamp;
   toilet.blockNumber = event.block.number;
@@ -345,6 +352,47 @@ export function handleToiletRated(event: ToiletRated): void {
   const global = loadGlobal();
   global.ratingCount += 1;
   global.save();
+}
+
+/**
+ * A judge's verdict. The bonus weight comes from the event rather than being recomputed
+ * here, so the mapping cannot disagree with the contract about how much was paid — the
+ * contract already decided, and scripts/check-earnings.mts asserts the two stay in step.
+ */
+export function handleToiletVerified(event: ToiletVerified): void {
+  const toilet = Toilet.load(event.params.id.toString());
+  if (toilet == null) {
+    log.warning("verdict for unindexed toilet {}", [event.params.id.toString()]);
+    return;
+  }
+
+  const score = event.params.score as i32;
+  const wasUnchecked = toilet.verificationScore == 0 && toilet.verificationBand == "unchecked";
+
+  toilet.verificationScore = score;
+  toilet.verificationBand = score >= 80 ? "max" : score >= 40 ? "medium" : "low";
+  toilet.verificationEvidence = event.params.evidence;
+  toilet.verifiedAt = event.block.timestamp;
+  toilet.updatedAt = event.block.timestamp;
+
+  const bonus = event.params.bonus;
+  if (bonus.gt(BigInt.zero())) {
+    toilet.weightBonus = toilet.weightBonus + (bonus.toI32() as i32);
+
+    const contributor = loadContributor(
+      event.params.contributor.toHexString(),
+      event.block.timestamp,
+    );
+    addWeight(contributor, bonus.toI32() as i32);
+    contributor.save();
+  }
+  toilet.save();
+
+  if (wasUnchecked) {
+    const global = loadGlobal();
+    global.verifiedCount += 1;
+    global.save();
+  }
 }
 
 export function handleDonated(event: Donated): void {

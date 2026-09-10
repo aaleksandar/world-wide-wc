@@ -67,6 +67,20 @@ type Toilet @entity(immutable: false) {
   smellSum: Int!
   busynessSum: Int!
 
+  """
+  A judge's verdict on the source behind this entry. 0 means nobody has checked, which is
+  a different thing from a source that was checked and found wanting — the same
+  distinction the amenity fields make.
+  """
+  verificationScore: Int!
+  "unchecked | low | medium | max"
+  verificationBand: String!
+  "Why the judge scored it that way. Onchain, so every verdict is auditable."
+  verificationEvidence: String!
+  verifiedAt: BigInt
+  "Weight the contributor earned by this entry's source being verified."
+  weightBonus: Int!
+
   createdAt: BigInt!
   updatedAt: BigInt!
   blockNumber: BigInt!
@@ -147,6 +161,7 @@ type Global @entity(immutable: false) {
   agentToilets: Int!
   ratingCount: Int!
   contributorCount: Int!
+  verifiedCount: Int!
   totalWeight: BigInt!
   totalDonated: BigInt!
   totalClaimed: BigInt!
