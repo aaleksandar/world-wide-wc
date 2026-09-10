@@ -3,7 +3,8 @@
 import { explorerTxUrl } from "@/lib/chain";
 import { ipfsToHttp } from "@/lib/ipfs";
 import { formatAccess } from "@/lib/payload";
-import type { ToiletRecord } from "@/lib/subgraph";
+import type { Known, ToiletRecord } from "@/lib/subgraph";
+import { Stars } from "./Stars";
 
 const SCALE_WORDS: Record<string, [string, string, string, string, string]> = {
   cleanliness: ["grim", "poor", "fine", "good", "immaculate"],
@@ -12,33 +13,32 @@ const SCALE_WORDS: Record<string, [string, string, string, string, string]> = {
 };
 
 /**
- * Every criterion is listed whether or not anyone has filled it in, because the gaps are
- * the point: a map that hides what it doesn't know looks complete and lies. Seeing eleven
- * "not recorded" rows is what tells you this entry needs a human.
+ * Every criterion appears whether or not anyone has filled it in, because the gaps are
+ * the point: a map that hides what it doesn't know looks finished and lies.
  *
- * Absent booleans read "not recorded" rather than "no". The payload encoder drops fields
- * at their default to save calldata, so `false` and "nobody said" are genuinely
- * indistinguishable onchain — claiming there is no bidet would be inventing data.
+ * Amenities are tri-state and each state gets its own tag. "No bidet" is a fact somebody
+ * established and worth as much as "has paper"; "not recorded" is the absence of a fact
+ * and reads as an invitation rather than an answer.
  */
 export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose: () => void }) {
-  const amenities = [
-    ["Paper", toilet.hasPaper],
-    ["Bidet", toilet.hasBidet],
-    ["Staffed", toilet.isStaffed],
-    ["Step-free", toilet.isAccessible],
-    ["Changing table", toilet.hasChangingTable],
-    ["Music", toilet.hasMusic],
-  ] as const;
+  const amenities: [string, string, Known][] = [
+    ["paper", "no paper", toilet.hasPaper],
+    ["bidet", "no bidet", toilet.hasBidet],
+    ["staffed", "unstaffed", toilet.isStaffed],
+    ["step-free", "not step-free", toilet.isAccessible],
+    ["changing table", "no changing table", toilet.hasChangingTable],
+    ["music", "no music", toilet.hasMusic],
+  ];
 
-  const scales = [
+  const scales: [string, string, number][] = [
     ["Cleanliness", "cleanliness", toilet.avgCleanliness || toilet.cleanliness],
     ["Smell", "smell", toilet.smell],
     ["Busyness", "busyness", toilet.busyness],
-  ] as const;
+  ];
 
-  const missing =
-    scales.filter(([, , value]) => !value).length +
-    amenities.filter(([, value]) => !value).length;
+  const unknownAmenities = amenities.filter(([, , state]) => state === "UNKNOWN");
+  const unratedScales = scales.filter(([, , value]) => !value);
+  const missing = unknownAmenities.length + unratedScales.length;
 
   return (
     <div className="max-h-[70vh] overflow-y-auto rounded-xl bg-white p-4 shadow-2xl ring-1 ring-black/5 dark:bg-zinc-900 dark:ring-white/10">
@@ -68,44 +68,39 @@ export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose:
         />
       ) : null}
 
-      <dl className="mt-4 space-y-0.5">
-        <Row label="Entry" value={<strong className="font-medium">{formatAccess(toilet)}</strong>} />
-        <Row
-          label="Open"
-          value={toilet.openingHours || null}
-          missing="not recorded"
-        />
+      <dl className="mt-3.5 space-y-0.5">
+        <Row label="Entry">
+          <strong className="font-medium">{formatAccess(toilet)}</strong>
+        </Row>
+        <Row label="Open" empty={!toilet.openingHours} missing="not recorded">
+          {toilet.openingHours}
+        </Row>
 
         {scales.map(([label, key, value]) => (
-          <Row
-            key={label}
-            label={label}
-            value={
-              value ? (
-                <>
-                  <strong className="font-medium">{Number(value).toFixed(1)}</strong>
-                  <span className="text-zinc-400">/5</span>{" "}
-                  <span className="text-zinc-500">
-                    {SCALE_WORDS[key][Math.round(Number(value)) - 1]}
-                  </span>
-                </>
-              ) : null
-            }
-            missing="nobody has rated it"
-          />
+          <Row key={label} label={label}>
+            <Stars
+              value={value}
+              label={
+                value
+                  ? SCALE_WORDS[key][Math.min(4, Math.max(0, Math.round(value) - 1))]
+                  : "not rated"
+              }
+            />
+          </Row>
         ))}
 
-        {amenities.map(([label, present]) => (
-          <Row
-            key={label}
-            label={label}
-            value={present ? <span className="text-emerald-600 dark:text-emerald-400">yes</span> : null}
-            missing="not recorded"
-          />
-        ))}
-
-        <Row label="Character" value={toilet.style || null} missing="not recorded" />
+        <Row label="Character" empty={!toilet.style} missing="not recorded">
+          {toilet.style}
+        </Row>
       </dl>
+
+      <ul className="mt-3 flex flex-wrap gap-1.5">
+        {amenities.map(([yes, no, state]) => (
+          <li key={yes}>
+            <Tag state={state}>{state === "NO" ? no : yes}</Tag>
+          </li>
+        ))}
+      </ul>
 
       {missing > 0 ? (
         <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
@@ -132,22 +127,12 @@ export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose:
           </span>
         ) : null}
         {toilet.sourceUrl ? (
-          <a
-            href={toilet.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="underline underline-offset-2 hover:text-zinc-800 dark:hover:text-zinc-200"
-          >
+          <a href={toilet.sourceUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-zinc-800 dark:hover:text-zinc-200">
             source
           </a>
         ) : null}
         {toilet.txHash ? (
-          <a
-            href={explorerTxUrl(toilet.txHash)}
-            target="_blank"
-            rel="noreferrer"
-            className="underline underline-offset-2 hover:text-zinc-800 dark:hover:text-zinc-200"
-          >
+          <a href={explorerTxUrl(toilet.txHash)} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-zinc-800 dark:hover:text-zinc-200">
             onchain
           </a>
         ) : null}
@@ -156,21 +141,45 @@ export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose:
   );
 }
 
+/** Solid for a confirmed yes, struck through for a confirmed no, dashed for unrecorded. */
+function Tag({ state, children }: { state: Known; children: React.ReactNode }) {
+  if (state === "YES") {
+    return (
+      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+        {children}
+      </span>
+    );
+  }
+  if (state === "NO") {
+    return (
+      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 line-through decoration-zinc-400 dark:bg-zinc-800 dark:text-zinc-400">
+        {children}
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-xs text-zinc-400 dark:border-zinc-600 dark:text-zinc-500">
+      {children}?
+    </span>
+  );
+}
+
 function Row({
   label,
-  value,
+  children,
+  empty,
   missing,
 }: {
   label: string;
-  value: React.ReactNode | null;
+  children?: React.ReactNode;
+  empty?: boolean;
   missing?: string;
 }) {
-  const empty = value === null || value === undefined || value === "";
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-zinc-100 py-1.5 last:border-0 dark:border-zinc-800/60">
-      <dt className={empty ? "text-sm text-zinc-400" : "text-sm text-zinc-500"}>{label}</dt>
+      <dt className="text-sm text-zinc-500">{label}</dt>
       <dd className={empty ? "text-right text-sm text-zinc-400 italic" : "text-right text-sm"}>
-        {empty ? (missing ?? "—") : value}
+        {empty ? (missing ?? "—") : children}
       </dd>
     </div>
   );

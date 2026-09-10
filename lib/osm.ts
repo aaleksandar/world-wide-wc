@@ -79,7 +79,24 @@ export function coordsOf(element: OsmElement): { lat: number; lng: number } | nu
 export const osmUrl = (element: OsmElement) =>
   `https://www.openstreetmap.org/${element.type}/${element.id}`;
 
-const yes = (value: string | undefined) => value === "yes" || value === "designated";
+/**
+ * OSM tags are tri-state and must stay that way. An absent tag means nobody has surveyed
+ * it, which is not the same claim as `wheelchair=no`. Flattening the two would have this
+ * agent asserting, about a hundred and twenty toilets, that they lack facilities nobody
+ * ever checked for — exactly the invented data the project exists to avoid.
+ */
+const known = (value: string | undefined): boolean | undefined => {
+  if (value === undefined) return undefined;
+  if (value === "yes" || value === "designated") return true;
+  if (value === "no") return false;
+  // "limited" means partial access, which this schema cannot express. Reporting it as a
+  // yes would tell a wheelchair user they can get in when they may not — a wrong answer
+  // with real consequences, so leave it unrecorded and let a person settle it.
+  return undefined;
+};
+
+/** True only for an explicit affirmative; used where a false would be over-claiming. */
+const yes = (value: string | undefined) => known(value) === true;
 
 /**
  * "0.50 GBP", "£0.20", "0.2 EUR", "20p" → minor units and a currency.
@@ -138,11 +155,16 @@ export function osmToToilet(element: OsmElement): Partial<Toilet> {
     access,
     price: access === "paid" ? price : 0,
     currency,
-    hasPaper: yes(tags["toilets:paper_supplied"]),
-    hasBidet: yes(tags["toilets:bidet"]),
-    isStaffed: yes(tags.supervised) || yes(tags.attendant),
-    isAccessible: yes(tags.wheelchair) || yes(tags["toilets:wheelchair"]),
-    hasChangingTable: yes(tags.changing_table),
+    hasPaper: known(tags["toilets:paper_supplied"]),
+    hasBidet: known(tags["toilets:bidet"]),
+    // Either tag saying yes is a yes; otherwise fall back to whichever one was surveyed.
+    isStaffed: yes(tags.supervised) || yes(tags.attendant)
+      ? true
+      : known(tags.supervised) ?? known(tags.attendant),
+    isAccessible: yes(tags.wheelchair) || yes(tags["toilets:wheelchair"])
+      ? true
+      : known(tags.wheelchair) ?? known(tags["toilets:wheelchair"]),
+    hasChangingTable: known(tags.changing_table),
     openingHours: tags.opening_hours ?? "",
     source: "agent",
     sourceUrl: osmUrl(element),

@@ -1,4 +1,14 @@
 """
+Three states, because "nobody has said" is not the same fact as "no".
+Conflating them makes a map that looks complete and lies.
+"""
+enum Known {
+  YES
+  NO
+  UNKNOWN
+}
+
+"""
 A public toilet. Everything here was parsed out of an onchain event — there is no
 database behind this app, and no field arrives from anywhere but the chain.
 """
@@ -21,13 +31,13 @@ type Toilet @entity(immutable: false) {
   cleanliness: Int!
   smell: Int!
   busyness: Int!
-  hasPaper: Boolean!
-  hasBidet: Boolean!
-  isStaffed: Boolean!
-  hasMusic: Boolean!
+  hasPaper: Known!
+  hasBidet: Known!
+  isStaffed: Known!
+  hasMusic: Known!
   "Step-free access. For a lot of people this is the only attribute that matters."
-  isAccessible: Boolean!
-  hasChangingTable: Boolean!
+  isAccessible: Known!
+  hasChangingTable: Known!
   "OSM-style opening hours, e.g. \"Mo-Su 10:00-20:00\" or \"24/7\"."
   openingHours: String!
   style: String!

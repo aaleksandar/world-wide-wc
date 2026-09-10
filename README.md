@@ -62,8 +62,15 @@ Nobody lies their way into a smaller reward. The lie worth telling is claiming t
 human when you're software — and that's the one readers can catch, because an agent entry
 without a working source URL is visibly worthless.
 
-Agent entries also leave `cleanliness`, `smell` and `busyness` at zero on purpose. A guess
+Agent entries also leave `cleanliness`, `smell` and `busyness` unrated on purpose. A guess
 there would displace the observation it imitates.
+
+Amenities are tri-state — `YES`, `NO`, `UNKNOWN` — because "somebody checked and there is
+no bidet" and "nobody has said" are different facts, and a map that conflates them looks
+complete and lies. The UI shows all three: a solid tag, a struck-through tag, and a dashed
+one. The OSM harvester respects it too: a missing tag becomes `UNKNOWN`, and
+`wheelchair=limited` also becomes `UNKNOWN` rather than a yes, because telling a wheelchair
+user they can get in when they may not is a wrong answer with real consequences.
 
 ## Photos are content-addressed
 

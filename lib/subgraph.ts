@@ -1,6 +1,9 @@
 import { boundingBox, distanceMetres } from "./geo";
 import type { Access, Source } from "./payload";
 
+/** Mirrors the subgraph's `Known` enum. */
+export type Known = "YES" | "NO" | "UNKNOWN";
+
 /**
  * The only read path in this app.
  *
@@ -24,12 +27,12 @@ export type ToiletRecord = {
   cleanliness: number;
   smell: number;
   busyness: number;
-  hasPaper: boolean;
-  hasBidet: boolean;
-  isStaffed: boolean;
-  hasMusic: boolean;
-  isAccessible: boolean;
-  hasChangingTable: boolean;
+  hasPaper: Known;
+  hasBidet: Known;
+  isStaffed: Known;
+  hasMusic: Known;
+  isAccessible: Known;
+  hasChangingTable: Known;
   openingHours: string;
   style: string;
   photoUrl: string;

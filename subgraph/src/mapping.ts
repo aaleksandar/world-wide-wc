@@ -73,11 +73,15 @@ function readInt(obj: TypedMap<string, JSONValue> | null, key: string): i32 {
   return value.toI64() as i32;
 }
 
-function readBool(obj: TypedMap<string, JSONValue> | null, key: string): boolean {
-  if (obj == null) return false;
+/**
+ * Tri-state. A key that is present and boolean is somebody's assertion either way; a key
+ * that is absent means nobody has said, and that is a different fact from "no".
+ */
+function readKnown(obj: TypedMap<string, JSONValue> | null, key: string): string {
+  if (obj == null) return "UNKNOWN";
   const value = obj.get(key);
-  if (value == null || value.kind != JSONValueKind.BOOL) return false;
-  return value.toBool();
+  if (value == null || value.kind != JSONValueKind.BOOL) return "UNKNOWN";
+  return value.toBool() ? "YES" : "NO";
 }
 
 // --- entity helpers ---------------------------------------------------------
@@ -207,12 +211,12 @@ export function handleToiletLogged(event: ToiletLogged): void {
   toilet.cleanliness = readInt(payload, K_CLEANLINESS);
   toilet.smell = readInt(payload, K_SMELL);
   toilet.busyness = readInt(payload, K_BUSYNESS);
-  toilet.hasPaper = readBool(payload, K_PAPER);
-  toilet.hasBidet = readBool(payload, K_BIDET);
-  toilet.isStaffed = readBool(payload, K_STAFFED);
-  toilet.hasMusic = readBool(payload, K_MUSIC);
-  toilet.isAccessible = readBool(payload, K_ACCESSIBLE);
-  toilet.hasChangingTable = readBool(payload, K_CHANGING);
+  toilet.hasPaper = readKnown(payload, K_PAPER);
+  toilet.hasBidet = readKnown(payload, K_BIDET);
+  toilet.isStaffed = readKnown(payload, K_STAFFED);
+  toilet.hasMusic = readKnown(payload, K_MUSIC);
+  toilet.isAccessible = readKnown(payload, K_ACCESSIBLE);
+  toilet.hasChangingTable = readKnown(payload, K_CHANGING);
   toilet.openingHours = readString(payload, K_OPENING_HOURS);
   toilet.style = readString(payload, K_STYLE);
   toilet.photoUrl = readString(payload, K_PHOTO);

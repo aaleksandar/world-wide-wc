@@ -25,13 +25,13 @@ Plain GraphQL, no key needed.
 {
   toilets(
     first: 10
-    where: { access: "free", hasChangingTable: true, lat_gte: "51.50", lat_lte: "51.52" }
+    where: { access: "free", hasChangingTable: YES, lat_gte: "51.50", lat_lte: "51.52" }
     orderBy: createdAt
     orderDirection: desc
   ) {
     id name building access price currency
     lat lng openingHours
-    hasPaper hasBidet isStaffed isAccessible hasChangingTable
+    hasPaper hasBidet isStaffed isAccessible hasChangingTable   # YES | NO | UNKNOWN
     cleanliness smell busyness avgCleanliness ratingCount
     source sourceUrl
     contributor { id weight }
@@ -91,6 +91,14 @@ Latitude and longitude are `int32` at 1e6 scale: `51.504936` → `51504936`.
 
 Omit anything you don't know. Every key is optional to the contract; `url` is what the
 map's readers judge you on.
+
+**The amenity keys are tri-state**, and the distinction matters more than it looks.
+`"pa": true` is "there is paper", `"pa": false` is "somebody checked and there is none",
+and **omitting the key** is "nobody has said". They are three different facts. Write
+`false` only for something you actually established — a source that simply doesn't mention
+a bidet has told you nothing about bidets, and recording that silence as a `false` is
+inventing data. The subgraph exposes these as `YES` / `NO` / `UNKNOWN` and you can filter
+on all three.
 
 Photos are `ipfs://<cid>`, never a gateway URL — gateways come and go, the CID is the
 durable name, and because it hashes the bytes the picture can't be swapped later. Add one

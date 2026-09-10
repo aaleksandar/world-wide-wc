@@ -28,9 +28,9 @@ const AMENITIES = [
 ] as const;
 
 const SCALES = [
-  ["cleanliness", "Cleanliness", "grim", "immaculate"],
-  ["smell", "Smell", "awful", "fine"],
-  ["busyness", "Busyness", "empty", "queue"],
+  ["cleanliness", "Cleanliness", ["grim", "poor", "fine", "good", "immaculate"]],
+  ["smell", "Smell", ["awful", "bad", "tolerable", "fine", "fresh"]],
+  ["busyness", "Busyness", ["empty", "quiet", "steady", "busy", "queue"]],
 ] as const;
 
 type Status =
@@ -211,27 +211,63 @@ export default function SubmitPage() {
           ) : null}
         </Field>
 
-        {SCALES.map(([key, label, low, high]) => (
+        {SCALES.map(([key, label, words]) => (
           <Field key={key} label={label}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((value) => (
-                <Chip key={value} active={draft[key] === value} onClick={() => set(key, value)}>
-                  {value}
-                </Chip>
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => set(key, draft[key] === value ? 0 : value)}
+                  aria-label={`${label} ${value} of 5`}
+                  aria-pressed={draft[key] === value}
+                  className="rounded p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <svg
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                    className={`size-7 ${
+                      (draft[key] ?? 0) >= value
+                        ? "fill-amber-400"
+                        : "fill-zinc-200 dark:fill-zinc-700"
+                    }`}
+                  >
+                    <path d="M10 1.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L10 14.9l-5.3 2.7 1-5.8L1.5 7.7l5.9-.9z" />
+                  </svg>
+                </button>
               ))}
-              <span className="ml-1 text-xs text-zinc-400">
-                {low} → {high}
+              <span className="ml-2 text-xs text-zinc-500">
+                {draft[key] ? words[draft[key]! - 1] : "tap to rate"}
               </span>
             </div>
           </Field>
         ))}
 
-        <Field label="What's in there">
-          <div className="flex flex-wrap gap-2">
+        <Field
+          label="What's in there"
+          hint="Leave blank if you didn't look — that's different from no"
+        >
+          <div className="space-y-1.5">
             {AMENITIES.map(([key, label]) => (
-              <Chip key={key} active={!!draft[key]} onClick={() => set(key, !draft[key])}>
-                {label}
-              </Chip>
+              <div key={key} className="flex items-center justify-between gap-3">
+                <span className="text-sm">{label}</span>
+                <div className="flex gap-1.5">
+                  <YesNo
+                    active={draft[key] === true}
+                    tone="yes"
+                    onClick={() => set(key, draft[key] === true ? undefined : true)}
+                  >
+                    yes
+                  </YesNo>
+                  <YesNo
+                    active={draft[key] === false}
+                    tone="no"
+                    onClick={() => set(key, draft[key] === false ? undefined : false)}
+                  >
+                    no
+                  </YesNo>
+                </div>
+              </div>
             ))}
           </div>
         </Field>
@@ -313,6 +349,41 @@ function Field({
       </div>
       {children}
     </div>
+  );
+}
+
+/**
+ * Three states, not two: yes, no, and left alone. Tapping the active one clears it back to
+ * unrecorded, so a mis-tap is recoverable and "I didn't check" stays sayable.
+ */
+function YesNo({
+  active,
+  tone,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  tone: "yes" | "no";
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const activeClass =
+    tone === "yes"
+      ? "bg-emerald-600 text-white"
+      : "bg-zinc-700 text-white dark:bg-zinc-300 dark:text-zinc-900";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`w-12 rounded-full px-2.5 py-1 text-xs font-medium ${
+        active
+          ? activeClass
+          : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

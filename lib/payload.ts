@@ -16,6 +16,16 @@ export type Access = (typeof ACCESS)[number];
 export const SOURCE = ["human", "agent"] as const;
 export type Source = (typeof SOURCE)[number];
 
+/**
+ * Three states, not two.
+ *
+ * `false` has to mean "somebody checked, and there isn't one" — distinct from "nobody has
+ * said". Conflating them makes a map that looks complete and lies, which is the failure
+ * this whole project exists to fix. On the wire the distinction is presence: the key is
+ * written for a definite yes or no, and omitted when unknown.
+ */
+export type Known = boolean | undefined;
+
 export type Toilet = {
   /** What it's called, if it's called anything. */
   name: string;
@@ -29,14 +39,14 @@ export type Toilet = {
   cleanliness: number;
   smell: number;
   busyness: number;
-  hasPaper: boolean;
-  hasBidet: boolean;
-  isStaffed: boolean;
-  hasMusic: boolean;
+  hasPaper: Known;
+  hasBidet: Known;
+  isStaffed: Known;
+  hasMusic: Known;
   /** Step-free access. For a lot of people this is the only attribute that matters. */
-  isAccessible: boolean;
+  isAccessible: Known;
   /** Has a baby changing table. */
-  hasChangingTable: boolean;
+  hasChangingTable: Known;
   /** OSM-style opening hours, e.g. "Mo-Su 10:00-20:00" or "24/7". */
   openingHours: string;
   /** Free text — "art deco tiling", "smells of pine", "there is a chandelier". */
@@ -56,12 +66,12 @@ export const emptyToilet: Toilet = {
   cleanliness: 0,
   smell: 0,
   busyness: 0,
-  hasPaper: false,
-  hasBidet: false,
-  isStaffed: false,
-  hasMusic: false,
-  isAccessible: false,
-  hasChangingTable: false,
+  hasPaper: undefined,
+  hasBidet: undefined,
+  isStaffed: undefined,
+  hasMusic: undefined,
+  isAccessible: undefined,
+  hasChangingTable: undefined,
   openingHours: "",
   style: "",
   photoUrl: "",
@@ -100,8 +110,11 @@ export function encodePayload(toilet: Partial<Toilet>): string {
   const full = { ...emptyToilet, ...toilet };
   const out: Record<string, string | number | boolean> = {};
   for (const field of Object.keys(KEYS) as (keyof Toilet)[]) {
-    if (full[field] === emptyToilet[field]) continue;
-    out[KEYS[field]] = full[field];
+    const value = full[field];
+    // undefined is "nobody has said" and is the one thing never written. A definite
+    // `false` is a fact somebody established, so it costs calldata and gets stored.
+    if (value === undefined || value === emptyToilet[field]) continue;
+    out[KEYS[field]] = value;
   }
   // Provenance is never dropped, even when it matches the default.
   out[KEYS.source] = full.source;
@@ -119,7 +132,8 @@ export function decodePayload(payload: string): Toilet {
   const str = (k: string, fallback = "") =>
     typeof raw[k] === "string" ? (raw[k] as string) : fallback;
   const num = (k: string) => (typeof raw[k] === "number" ? (raw[k] as number) : 0);
-  const bool = (k: string) => raw[k] === true;
+  // Present and boolean means somebody said so; absent means nobody has.
+  const known = (k: string): Known => (typeof raw[k] === "boolean" ? (raw[k] as boolean) : undefined);
 
   const access = str(KEYS.access) as Access;
   const source = str(KEYS.source) as Source;
@@ -133,12 +147,12 @@ export function decodePayload(payload: string): Toilet {
     cleanliness: num(KEYS.cleanliness),
     smell: num(KEYS.smell),
     busyness: num(KEYS.busyness),
-    hasPaper: bool(KEYS.hasPaper),
-    hasBidet: bool(KEYS.hasBidet),
-    isStaffed: bool(KEYS.isStaffed),
-    hasMusic: bool(KEYS.hasMusic),
-    isAccessible: bool(KEYS.isAccessible),
-    hasChangingTable: bool(KEYS.hasChangingTable),
+    hasPaper: known(KEYS.hasPaper),
+    hasBidet: known(KEYS.hasBidet),
+    isStaffed: known(KEYS.isStaffed),
+    hasMusic: known(KEYS.hasMusic),
+    isAccessible: known(KEYS.isAccessible),
+    hasChangingTable: known(KEYS.hasChangingTable),
     openingHours: str(KEYS.openingHours),
     style: str(KEYS.style),
     photoUrl: str(KEYS.photoUrl),
