@@ -10,7 +10,13 @@ import {
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLE_URL, configureMapWorker } from "@/lib/map";
-import { applyFilters, type FilterableToilet, type Filters, NO_FILTERS } from "@/lib/filters";
+import {
+  ACCESS_COLOURS,
+  applyFilters,
+  type FilterableToilet,
+  type Filters,
+  NO_FILTERS,
+} from "@/lib/filters";
 import type { ToiletRecord } from "@/lib/subgraph";
 import { FilterPanel } from "./Filters";
 import { ToiletCard } from "./ToiletCard";
@@ -22,13 +28,6 @@ import { ToiletCard } from "./ToiletCard";
  */
 
 const SOURCE_ID = "toilets";
-
-const ACCESS_COLOURS: Record<string, string> = {
-  free: "#16a34a",
-  paid: "#d97706",
-  customer: "#2563eb",
-  unknown: "#71717a",
-};
 
 export function ToiletMap({
   toilets,
@@ -184,35 +183,7 @@ export function ToiletMap({
         </div>
       ) : null}
 
-      <Legend />
     </div>
   );
 }
 
-function Legend() {
-  return (
-    <div className="absolute bottom-3 left-3 z-10 rounded-lg bg-white/90 p-3 text-xs shadow-lg backdrop-blur dark:bg-zinc-900/90">
-      <ul className="space-y-1.5">
-        {(
-          [
-            ["free", "Free"],
-            ["paid", "Paid"],
-            ["customer", "Customers only"],
-            ["unknown", "Unknown"],
-          ] as const
-        ).map(([key, label]) => (
-          <li key={key} className="flex items-center gap-2">
-            <span
-              className="size-2.5 rounded-full"
-              style={{ backgroundColor: ACCESS_COLOURS[key] }}
-            />
-            {label}
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 border-t border-zinc-200 pt-2 text-[11px] text-zinc-500 dark:border-zinc-700">
-        White ring = sourced by an agent
-      </p>
-    </div>
-  );
-}

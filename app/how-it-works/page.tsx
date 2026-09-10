@@ -68,8 +68,8 @@ export default async function HowItWorksPage() {
         <h2 className="text-lg font-medium">What contributors get</h2>
         <p className="mt-3 text-zinc-600 dark:text-zinc-400">
           Every contribution earns <strong>weight</strong>: 10 for a human entry, 3 for an
-          agent entry, 1 for rating someone else&apos;s. Anyone can donate to the toilet
-          cause, and every donation is split across all contributors in proportion to
+          agent entry, 1 for rating someone else&apos;s. Anyone can contribute to the
+          ecosystem, and every donation is split across all contributors in proportion to
           their weight, sitting claimable until they take it. There is no token — weight
           is the whole accounting, and what it pays out in is ETH.
         </p>
@@ -127,7 +127,7 @@ export default async function HowItWorksPage() {
             Add one yourself
           </Link>
           <Link href="/rewards" className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium dark:bg-zinc-800">
-            The toilet cause
+            Contribute to the ecosystem
           </Link>
         </div>
       </section>

@@ -31,7 +31,7 @@ export default async function LeaderboardPage() {
       </Link>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight">Leaderboard</h1>
       <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-        Everyone who has put a toilet on this map, and what the toilet cause has paid them
+        Everyone who has put a toilet on this map, and what the ecosystem has paid them
         for it. Read straight from the subgraph — nothing here is a database row.
       </p>
 
@@ -124,7 +124,7 @@ export default async function LeaderboardPage() {
           href="/rewards"
           className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium dark:bg-zinc-800"
         >
-          Donate to the cause
+          Contribute to the ecosystem
         </Link>
       </div>
     </main>

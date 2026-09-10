@@ -9,7 +9,7 @@ import { chain, contractAddress, explorerAddressUrl, explorerTxUrl } from "@/lib
 import { wwwcAbi } from "@/lib/wwwc-abi";
 
 /**
- * The toilet cause.
+ * Contribute to the ecosystem.
  *
  * Donations come from donors' own wallets straight into the contract, and leave only
  * through claim(). Nothing we run can touch the pool in between — the relayer that pays
@@ -75,7 +75,7 @@ export default function RewardsPage() {
           <Link href="/" className="text-sm text-zinc-500 hover:underline">
             ← Map
           </Link>
-          <h1 className="mt-1 text-xl font-semibold">The toilet cause</h1>
+          <h1 className="mt-1 text-xl font-semibold">Contribute to the ecosystem</h1>
         </div>
         <ConnectButton />
       </header>

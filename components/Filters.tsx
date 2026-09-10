@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   Accessibility,
   Baby,
-  Bot,
   Clock,
   Music,
   Droplets,
@@ -18,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  ACCESS_COLOURS,
   AMENITY_KEYS,
   AMENITY_LABELS,
   type AmenityKey,
@@ -97,6 +97,8 @@ export function FilterPanel({
 
       {open ? (
         <div className="max-h-[55vh] space-y-4 overflow-y-auto border-t border-zinc-200 p-3 dark:border-zinc-800">
+          {/* The dots are the map's key: same colours, attached to the control that
+              selects them, so there is no separate legend to look up. */}
           <Group label="Getting in">
             <div className="flex flex-wrap gap-1.5">
               {ACCESS.map((option) => (
@@ -105,6 +107,7 @@ export function FilterPanel({
                   active={filters.access.includes(option)}
                   onClick={() => set("access", toggle(filters.access, option))}
                 >
+                  <Dot colour={ACCESS_COLOURS[option]} />
                   {ACCESS_LABELS[option]}
                 </Chip>
               ))}
@@ -161,7 +164,8 @@ export function FilterPanel({
                 [
                   ["any", "Anyone", null],
                   ["human", "A person", <User key="u" className="size-3.5" aria-hidden />],
-                  ["agent", "An agent", <Bot key="b" className="size-3.5" aria-hidden />],
+                  // A ringed dot, because that is how agent entries are drawn on the map.
+                  ["agent", "An agent", <Dot key="b" colour="#71717a" ringed />],
                 ] as const
               ).map(([value, label, icon]) => (
                 <Chip key={value} active={filters.source === value} onClick={() => set("source", value)}>
@@ -185,6 +189,22 @@ export function FilterPanel({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A marker as the map draws it. The ring is kept faintly outlined even when unringed, so
+ * the pale `unknown` grey does not vanish against a light chip.
+ */
+function Dot({ colour, ringed }: { colour: string; ringed?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`size-2.5 shrink-0 rounded-full ${
+        ringed ? "ring-2 ring-white dark:ring-zinc-100" : "ring-1 ring-black/15 dark:ring-white/25"
+      }`}
+      style={{ backgroundColor: colour }}
+    />
   );
 }
 

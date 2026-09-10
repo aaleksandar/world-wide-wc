@@ -35,7 +35,7 @@ software cannot: is it clean, does it smell, is there paper, is there a queue. A
 on the map can be filled in by whoever visits next — the card lists what nobody has
 answered and the form asks only those questions.
 
-**Donations flow to both.** Anyone can donate to the toilet cause. Every donation splits
+**Donations flow to both.** Anyone can contribute to the ecosystem. Every donation splits
 across all contributors in proportion to what they contributed, claimable whenever they
 want it.
 

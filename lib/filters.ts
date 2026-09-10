@@ -4,6 +4,19 @@ import type { ToiletRecord } from "./subgraph";
 
 export type FilterableToilet = ToiletRecord & { openNow: OpenState };
 
+/**
+ * How a toilet is coloured on the map.
+ *
+ * Shared with the filter panel, which renders the same colours as dots beside the chips
+ * that select them — the key lives next to the control rather than in a separate legend.
+ */
+export const ACCESS_COLOURS: Record<Access, string> = {
+  free: "#16a34a",
+  paid: "#d97706",
+  customer: "#2563eb",
+  unknown: "#71717a",
+};
+
 /** The six tri-state fittings, in the order they read best. */
 export const AMENITY_KEYS = [
   "hasPaper",
