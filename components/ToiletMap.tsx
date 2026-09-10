@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 // MapLibre 6 dropped the default export; everything is named now.
 import {
   GeolocateControl,
@@ -10,7 +10,9 @@ import {
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLE_URL, configureMapWorker } from "@/lib/map";
+import { applyFilters, type FilterableToilet, type Filters, NO_FILTERS } from "@/lib/filters";
 import type { ToiletRecord } from "@/lib/subgraph";
+import { FilterPanel } from "./Filters";
 import { ToiletCard } from "./ToiletCard";
 
 /**
@@ -33,7 +35,7 @@ export function ToiletMap({
   center,
   isPreview,
 }: {
-  toilets: ToiletRecord[];
+  toilets: FilterableToilet[];
   center: [number, number];
   isPreview: boolean;
 }) {
@@ -41,9 +43,15 @@ export function ToiletMap({
   const map = useRef<MapLibreMap | null>(null);
   const [selected, setSelected] = useState<ToiletRecord | null>(null);
   const [ready, setReady] = useState(false);
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+
+  // Filtering happens here rather than in the subgraph because every toilet is already
+  // loaded: a re-query would be slower than a predicate and would make the map flicker.
+  // The subgraph supports the same filters natively for anyone querying it directly.
+  const visible = useMemo(() => applyFilters(toilets, filters), [toilets, filters]);
 
   const byId = useRef(new Map<string, ToiletRecord>());
-  byId.current = new Map(toilets.map((toilet) => [toilet.id, toilet]));
+  byId.current = new Map(visible.map((toilet) => [toilet.id, toilet]));
 
   useEffect(() => {
     if (!container.current || map.current) return;
@@ -125,7 +133,7 @@ export function ToiletMap({
 
     source.setData({
       type: "FeatureCollection",
-      features: toilets.map((toilet) => ({
+      features: visible.map((toilet) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [toilet.lng, toilet.lat] },
         properties: {
@@ -135,15 +143,35 @@ export function ToiletMap({
         },
       })),
     });
-  }, [toilets, ready]);
+  }, [visible, ready]);
 
+
+  useEffect(() => {
+    if (selected && !visible.some((toilet) => toilet.id === selected.id)) setSelected(null);
+  }, [visible, selected]);
 
   return (
     <div className="relative h-full w-full">
       <div ref={container} className="h-full w-full" />
 
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3">
+        <div className="pointer-events-auto w-full max-w-sm">
+          <FilterPanel
+            filters={filters}
+            onChange={setFilters}
+            showing={visible.length}
+            total={toilets.length}
+          />
+          {visible.length === 0 ? (
+            <p className="mt-2 rounded-lg bg-white/95 px-3 py-2 text-center text-sm text-zinc-500 shadow-lg dark:bg-zinc-900/95">
+              Nothing matches. Try dropping a filter.
+            </p>
+          ) : null}
+        </div>
+      </div>
+
       {isPreview ? (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3">
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center p-3">
           <p className="pointer-events-auto rounded-full bg-amber-500 px-4 py-1.5 text-xs font-medium text-amber-950 shadow-lg">
             Preview data — no subgraph configured, nothing here is onchain yet
           </p>

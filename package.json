@@ -20,10 +20,14 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",
+    "@types/tz-lookup": "^6.1.2",
+    "lucide-react": "^1.44.0",
     "maplibre-gl": "^6.9.0",
     "next": "16.3.4",
+    "opening_hours": "^3.14.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tz-lookup": "^6.1.25",
     "viem": "^2.56.3",
     "wagmi": "^2.19.5"
   },

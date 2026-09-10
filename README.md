@@ -74,6 +74,23 @@ one. The OSM harvester respects it too: a missing tag becomes `UNKNOWN`, and
 `wheelchair=limited` also becomes `UNKNOWN` rather than a yes, because telling a wheelchair
 user they can get in when they may not is a wrong answer with real consequences.
 
+## Finding one
+
+The map filters on everything it records: how you get in, whether it's open right now,
+cleanliness, smell, busyness, and each of the six fittings. Filtering runs in the browser
+over toilets already loaded from the subgraph, so it is instant and the map never
+flickers — the subgraph supports the same filters natively for anyone querying it
+directly, which is what `SKILL.md` documents.
+
+"Open now" is evaluated on the server, in the timezone of the toilet rather than of the
+viewer. OSM opening hours are far messier than they look — our own London data contains
+month ranges, public-holiday clauses, split intervals and `08:00-dusk` — so this uses a
+real parser rather than a regex. Being wrong here sends somebody to a locked door.
+
+A rating filter deliberately excludes unrated toilets, and says so: asking for "3 stars or
+better" and being shown places nobody has rated would be the same quiet lie the tri-state
+work removed elsewhere.
+
 ## Photos are content-addressed
 
 Photos go to IPFS and only `ipfs://<cid>` goes onchain. Not on The Graph — that indexes

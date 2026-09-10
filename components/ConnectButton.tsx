@@ -1,5 +1,6 @@
 "use client";
 
+import { Wallet } from "lucide-react";
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { chain } from "@/lib/chain";
 
@@ -19,9 +20,10 @@ export function ConnectButton() {
         type="button"
         disabled={isPending || !injectedConnector}
         onClick={() => injectedConnector && connect({ connector: injectedConnector })}
-        className="rounded-full bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        className="flex items-center gap-1.5 rounded-full bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
       >
-        {isPending ? "Connecting…" : "Connect wallet"}
+        <Wallet className="size-4" aria-hidden />
+        {isPending ? "Connecting…" : "Connect"}
       </button>
     );
   }
@@ -43,8 +45,9 @@ export function ConnectButton() {
       type="button"
       onClick={() => disconnect()}
       title="Disconnect"
-      className="rounded-full bg-zinc-100 px-4 py-1.5 font-mono text-sm text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+      className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-4 py-1.5 font-mono text-sm text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
     >
+      <Wallet className="size-4" aria-hidden />
       {short(address!)}
     </button>
   );
