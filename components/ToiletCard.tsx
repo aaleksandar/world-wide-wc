@@ -107,6 +107,12 @@ export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose:
         ))}
       </ul>
 
+      {toilet.verificationEvidence ? (
+        <p className="mt-3 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-400">
+          <span className="font-medium">Source checked:</span> {toilet.verificationEvidence}
+        </p>
+      ) : null}
+
       {adding ? (
         <AddWhatYouKnow toilet={toilet} onDone={() => setAdding(false)} />
       ) : (
@@ -141,6 +147,20 @@ export function ToiletCard({ toilet, onClose }: { toilet: ToiletRecord; onClose:
         >
           {toilet.source === "agent" ? "agent-sourced" : "human-logged"}
         </span>
+        {toilet.verificationBand !== "unchecked" ? (
+          <span
+            title={toilet.verificationEvidence}
+            className={
+              toilet.verificationBand === "max"
+                ? "rounded bg-emerald-100 px-1.5 py-0.5 font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                : toilet.verificationBand === "medium"
+                  ? "rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                  : "rounded bg-red-100 px-1.5 py-0.5 font-medium text-red-800 dark:bg-red-950 dark:text-red-300"
+            }
+          >
+            source {toilet.verificationBand} · {toilet.verificationScore}
+          </span>
+        ) : null}
         {toilet.ratingCount > 0 ? (
           <span>
             {toilet.ratingCount} {toilet.ratingCount === 1 ? "rating" : "ratings"}

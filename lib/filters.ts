@@ -47,6 +47,8 @@ export type Filters = {
   maxBusyness: number;
   /** Every listed amenity must be a definite yes. */
   amenities: AmenityKey[];
+  /** Only entries whose source a judge checked and found good. */
+  verifiedOnly: boolean;
   source: "any" | "human" | "agent";
 };
 
@@ -57,6 +59,7 @@ export const NO_FILTERS: Filters = {
   minSmell: 0,
   maxBusyness: 0,
   amenities: [],
+  verifiedOnly: false,
   source: "any",
 };
 
@@ -68,6 +71,7 @@ export function countActive(filters: Filters): number {
     (filters.minSmell ? 1 : 0) +
     (filters.maxBusyness ? 1 : 0) +
     filters.amenities.length +
+    (filters.verifiedOnly ? 1 : 0) +
     (filters.source === "any" ? 0 : 1)
   );
 }
@@ -96,6 +100,10 @@ export function applyFilters(toilets: FilterableToilet[], filters: Filters): Fil
     for (const amenity of filters.amenities) {
       if (toilet[amenity] !== "YES") return false;
     }
+
+    // "max" only: a medium verdict means the source was real but stale, which is not the
+    // same as vouched for.
+    if (filters.verifiedOnly && toilet.verificationBand !== "max") return false;
 
     if (filters.source !== "any" && toilet.source !== filters.source) return false;
 

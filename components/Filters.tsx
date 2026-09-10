@@ -8,6 +8,7 @@ import {
   Music,
   Droplets,
   ScrollText,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   User,
@@ -157,6 +158,13 @@ export function FilterPanel({
               an absent rating isn&apos;t a good one.
             </p>
           ) : null}
+
+          <Group label="Source">
+            <Chip active={filters.verifiedOnly} onClick={() => set("verifiedOnly", !filters.verifiedOnly)}>
+              <ShieldCheck className="size-3.5" aria-hidden />
+              Verified source
+            </Chip>
+          </Group>
 
           <Group label="Who found it">
             <div className="flex flex-wrap gap-1.5">
