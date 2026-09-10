@@ -71,7 +71,24 @@ type Contributor @entity(immutable: false) {
   ratingsGiven: Int!
   "Mirrors the contract: 10 per human entry, 3 per agent entry, 1 per rating."
   weight: BigInt!
+  "Wei already withdrawn."
   claimed: BigInt!
+
+  """
+  Settled-but-unwithdrawn wei. Together with `rewardDebt` and the global `accPerWeight`
+  this reproduces the contract's `pendingOf` exactly:
+
+      pending = accrued + weight * accPerWeight - rewardDebt
+
+  It is left as three fields rather than one materialised `pending` on purpose. A
+  donation moves `accPerWeight`, which would change the pending balance of every
+  contributor at once — writing that out would be the O(n) loop the contract's
+  accumulator exists to avoid. Two extra numbers and a multiplication at query time
+  cost nothing instead.
+  """
+  accrued: BigInt!
+  rewardDebt: BigInt!
+
   firstSeenAt: BigInt!
   toilets: [Toilet!]! @derivedFrom(field: "contributor")
   ratings: [Rating!]! @derivedFrom(field: "rater")
@@ -97,4 +114,8 @@ type Global @entity(immutable: false) {
   totalWeight: BigInt!
   totalDonated: BigInt!
   totalClaimed: BigInt!
+  "Whole wei owed per unit of weight. Needed to compute any contributor's pending balance."
+  accPerWeight: BigInt!
+  "Donated wei too small to divide across the current weight. Carried, never stranded."
+  poolPending: BigInt!
 }

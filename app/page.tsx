@@ -23,6 +23,9 @@ export default async function HomePage() {
             ? `${stats.toiletCount} toilets · ${stats.humanToilets} human · ${stats.agentToilets} agent`
             : `${toilets.length} toilets`}
         </p>
+        <Link href="/leaderboard" className="text-sm text-zinc-500 hover:underline">
+          Leaderboard
+        </Link>
         <Link href="/how-it-works" className="text-sm text-zinc-500 hover:underline">
           How it works
         </Link>

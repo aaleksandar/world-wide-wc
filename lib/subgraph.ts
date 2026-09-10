@@ -197,21 +197,76 @@ export type ContributorRecord = {
   id: string;
   toiletsLogged: number;
   ratingsGiven: number;
-  weight: string;
-  claimed: string;
+  weight: bigint;
+  claimed: bigint;
+  /** Settled but not yet withdrawn. */
+  pending: bigint;
+  /** Everything this contributor has ever been owed: claimed + pending. */
+  earned: bigint;
+  firstSeenAt: number;
 };
 
-export async function fetchTopContributors(first = 20): Promise<ContributorRecord[]> {
-  if (!subgraphConfigured) return [];
-  const data = await query<{ contributors: ContributorRecord[] }>(
-    `query Contributors($first: Int!) {
+type RawContributor = {
+  id: string;
+  toiletsLogged: number;
+  ratingsGiven: number;
+  weight: string;
+  claimed: string;
+  accrued: string;
+  rewardDebt: string;
+  firstSeenAt: string;
+};
+
+/**
+ * Contributors by weight, with what each has earned.
+ *
+ * `pending` is computed here rather than stored, because a donation moves `accPerWeight`
+ * and so changes every contributor's pending balance at once — materialising it would be
+ * the O(n) write the contract's accumulator exists to avoid. This is the same expression
+ * the contract's `pendingOf` evaluates, and scripts/check-earnings.mts asserts the two
+ * agree for every contributor.
+ */
+export async function fetchLeaderboard(first = 50): Promise<{
+  contributors: ContributorRecord[];
+  stats: GlobalStats | null;
+}> {
+  if (!subgraphConfigured) return { contributors: [], stats: null };
+
+  const data = await query<{
+    contributors: RawContributor[];
+    global: (GlobalStats & { accPerWeight: string }) | null;
+  }>(
+    `query Leaderboard($first: Int!) {
       contributors(first: $first, orderBy: weight, orderDirection: desc) {
-        id toiletsLogged ratingsGiven weight claimed
+        id toiletsLogged ratingsGiven weight claimed accrued rewardDebt firstSeenAt
+      }
+      global(id: "global") {
+        toiletCount humanToilets agentToilets ratingCount contributorCount
+        totalWeight totalDonated totalClaimed accPerWeight
       }
     }`,
     { first },
   );
-  return data.contributors;
+
+  const accPerWeight = BigInt(data.global?.accPerWeight ?? "0");
+
+  const contributors = data.contributors.map((raw) => {
+    const weight = BigInt(raw.weight);
+    const claimed = BigInt(raw.claimed);
+    const pending = BigInt(raw.accrued) + weight * accPerWeight - BigInt(raw.rewardDebt);
+    return {
+      id: raw.id,
+      toiletsLogged: raw.toiletsLogged,
+      ratingsGiven: raw.ratingsGiven,
+      weight,
+      claimed,
+      pending,
+      earned: claimed + pending,
+      firstSeenAt: Number(raw.firstSeenAt),
+    };
+  });
+
+  return { contributors, stats: data.global };
 }
 
 export type ToiletSearch = {

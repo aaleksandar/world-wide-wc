@@ -94,6 +94,8 @@ function loadGlobal(): Global {
     global.totalWeight = BigInt.zero();
     global.totalDonated = BigInt.zero();
     global.totalClaimed = BigInt.zero();
+    global.accPerWeight = BigInt.zero();
+    global.poolPending = BigInt.zero();
   }
   return global as Global;
 }
@@ -106,6 +108,8 @@ function loadContributor(address: string, timestamp: BigInt): Contributor {
     contributor.ratingsGiven = 0;
     contributor.weight = BigInt.zero();
     contributor.claimed = BigInt.zero();
+    contributor.accrued = BigInt.zero();
+    contributor.rewardDebt = BigInt.zero();
     contributor.firstSeenAt = timestamp;
 
     const global = loadGlobal();
@@ -115,10 +119,50 @@ function loadContributor(address: string, timestamp: BigInt): Contributor {
   return contributor as Contributor;
 }
 
+// --- the reward accumulator -------------------------------------------------
+// A line-for-line mirror of WorldWideWC.sol. It is duplicated here rather than read back
+// from the contract so the leaderboard is a single GraphQL query with no RPC calls behind
+// it — but that means the two must not drift. scripts/check-earnings.mts compares this
+// against the contract's own pendingOf for every contributor.
+
+/**
+ * Moves whatever of `poolPending` divides evenly across the current weight into the
+ * accumulator, keeping the undividable remainder for next time. Whole wei per unit of
+ * weight, exactly as onchain: a scaled fixed-point version leaks.
+ */
+function flushPool(global: Global): void {
+  if (global.totalWeight.isZero() || global.poolPending.isZero()) return;
+  const share = global.poolPending.div(global.totalWeight);
+  if (share.isZero()) return; // less than a wei each; wait for the pool to grow
+  global.accPerWeight = global.accPerWeight.plus(share);
+  global.poolPending = global.poolPending.minus(share.times(global.totalWeight));
+}
+
+function unsettled(contributor: Contributor, global: Global): BigInt {
+  return contributor.weight.times(global.accPerWeight).minus(contributor.rewardDebt);
+}
+
+function settle(contributor: Contributor, global: Global): void {
+  contributor.accrued = contributor.accrued.plus(unsettled(contributor, global));
+  contributor.rewardDebt = contributor.weight.times(global.accPerWeight);
+}
+
+/**
+ * Flushes before and after, like the contract: before so a donation that arrived earlier
+ * is not diluted by this new contributor, after because the larger total may now divide a
+ * remainder that previously could not be shared out.
+ */
 function addWeight(contributor: Contributor, weight: i32): void {
-  contributor.weight = contributor.weight.plus(BigInt.fromI32(weight));
   const global = loadGlobal();
+
+  flushPool(global);
+  settle(contributor, global);
+
+  contributor.weight = contributor.weight.plus(BigInt.fromI32(weight));
   global.totalWeight = global.totalWeight.plus(BigInt.fromI32(weight));
+  contributor.rewardDebt = contributor.weight.times(global.accPerWeight);
+
+  flushPool(global);
   global.save();
 }
 
@@ -256,6 +300,8 @@ export function handleDonated(event: Donated): void {
 
   const global = loadGlobal();
   global.totalDonated = global.totalDonated.plus(event.params.amount);
+  global.poolPending = global.poolPending.plus(event.params.amount);
+  flushPool(global);
   global.save();
 }
 
@@ -264,10 +310,12 @@ export function handleClaimed(event: Claimed): void {
     event.params.contributor.toHexString(),
     event.block.timestamp,
   );
+  const global = loadGlobal();
+  settle(contributor, global);
+  contributor.accrued = BigInt.zero();
   contributor.claimed = contributor.claimed.plus(event.params.amount);
   contributor.save();
 
-  const global = loadGlobal();
   global.totalClaimed = global.totalClaimed.plus(event.params.amount);
   global.save();
 }
