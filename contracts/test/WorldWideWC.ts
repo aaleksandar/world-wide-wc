@@ -42,14 +42,14 @@ describe("WorldWideWC rewards", () => {
     await asRelayer.write.logFor([who, LONDON_LAT, LONDON_LNG, "{}", isAgent]);
   }
 
-  it("mints WC one-for-one with the weight earned", async () => {
+  it("records weight according to who contributed and how", async () => {
     const { wc, asRelayer } = await deploy();
 
     await log(asRelayer, alice);
     await log(asRelayer, bob, true);
 
-    assert.equal(await wc.read.balanceOf([alice]), parseEther("10"));
-    assert.equal(await wc.read.balanceOf([bob]), parseEther("3"));
+    assert.equal(await wc.read.weightOf([alice]), 10n);
+    assert.equal(await wc.read.weightOf([bob]), 3n);
     assert.equal(await wc.read.totalWeight(), 13n);
   });
 
@@ -168,7 +168,6 @@ describe("WorldWideWC rewards", () => {
 
     // Credited to the sender, at full human weight, with nobody in between.
     assert.equal(await wc.read.weightOf([alice]), 10n);
-    assert.equal(await wc.read.balanceOf([alice]), parseEther("10"));
     assert.equal(await wc.read.toiletCount(), 1n);
   });
 
@@ -184,7 +183,6 @@ describe("WorldWideWC rewards", () => {
     // Self-declared provenance is safe precisely because honesty is the cheaper option:
     // nobody lies their way into 3 weight when they could have claimed 10.
     assert.equal(await wc.read.weightOf([bob]), 3n);
-    assert.equal(await wc.read.balanceOf([bob]), parseEther("3"));
   });
 
   it("never lets the relayer touch the reward pool", async () => {

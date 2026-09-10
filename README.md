@@ -105,6 +105,15 @@ first thing to do after the hackathon.
 
 ## The reward pool
 
+Contributing earns **weight** — 10 for a person who was there, 3 for an agent entry, 1 for
+rating someone else's. Every donation is split across all contributors in proportion to
+weight, and sits claimable until they take it.
+
+There is no token. Weight is the whole accounting and payouts are in ETH. An earlier
+version also minted an ERC-20 one-for-one with weight, which was a second name for the
+same number — and a misleading one, since the token transferred while the weight behind it
+did not. Selling it would have moved nothing. It's gone.
+
 Money enters only through `donate()`, from a donor's own wallet, and leaves only through
 `claim()`. The relayer that pays gas for contributions cannot touch it, and there's a test
 that says so.

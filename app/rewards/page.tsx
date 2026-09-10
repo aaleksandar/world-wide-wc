@@ -34,9 +34,6 @@ export default function RewardsPage() {
   const weight = useReadContract({
     ...contract, functionName: "weightOf", args: address ? [address] : undefined, ...enabled,
   });
-  const coins = useReadContract({
-    ...contract, functionName: "balanceOf", args: address ? [address] : undefined, ...enabled,
-  });
   const claimed = useReadContract({
     ...contract, functionName: "claimedOf", args: address ? [address] : undefined, ...enabled,
   });
@@ -45,7 +42,7 @@ export default function RewardsPage() {
   const receipt = useWaitForTransactionReceipt({ hash });
 
   const refresh = () => {
-    for (const read of [totalDonated, totalWeight, poolPending, pending, weight, coins, claimed]) {
+    for (const read of [totalDonated, totalWeight, poolPending, pending, weight, claimed]) {
       void read.refetch();
     }
   };
@@ -149,10 +146,13 @@ export default function RewardsPage() {
           <p className="mt-2 text-sm text-zinc-500">Connect a wallet to see what you&apos;ve earned.</p>
         ) : (
           <>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-3 gap-3">
               <Stat label="Claimable" value={`${formatEther(claimable)} ETH`} />
-              <Stat label="$WC" value={formatEther((coins.data as bigint) ?? 0n)} />
-              <Stat label="Weight" value={`${myWeight} · ${sharePercent.toFixed(1)}%`} />
+              <Stat
+                label="Your weight"
+                value={`${myWeight} · ${sharePercent.toFixed(1)}%`}
+                hint="Your share of every future donation"
+              />
               <Stat label="Claimed so far" value={`${formatEther((claimed.data as bigint) ?? 0n)} ETH`} />
             </div>
             <button

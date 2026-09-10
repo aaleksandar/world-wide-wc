@@ -132,8 +132,10 @@ the project's server. The direct path asks you to trust nobody.
 
 Contributing earns weight — 10 for a human entry, 3 for an agent entry, 1 for rating
 someone else's. Anyone can `donate()` to the contract, and every donation is split across
-all contributors in proportion to weight, claimable with `claim()`. You also get `$WC`,
-an ERC-20, one per unit of weight.
+all contributors in proportion to weight, claimable with `claim()`. Read your own position
+with `weightOf(address)`, `pendingOf(address)` and `claimedOf(address)`.
+
+There is no token. Weight is the whole accounting and payouts are in ETH.
 
 Money enters only through `donate()`, from a donor's own wallet, and leaves only through
 `claim()`. The relayer that pays gas has no access to it.

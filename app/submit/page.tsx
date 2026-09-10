@@ -116,8 +116,8 @@ export default function SubmitPage() {
         <p className="text-5xl">🚽</p>
         <h1 className="mt-4 text-2xl font-semibold">On the map, and onchain.</h1>
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          You earned 10 $WC. When someone donates to the toilet cause, your share of it is
-          waiting to be claimed.
+          That earned you 10 weight. Every donation to the toilet cause is split by weight,
+          and your share sits claimable until you take it.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Link

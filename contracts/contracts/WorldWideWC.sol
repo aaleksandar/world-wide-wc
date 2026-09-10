@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -14,9 +13,15 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// only read path the app has. What must live onchain is the part money depends on:
 /// who contributed, how much weight that earned them, and what they can claim.
 ///
+/// There is no token here. Weight is the whole accounting: it is what the pool pays
+/// against, and a contributor's share of every donation is their weight over the total.
+/// An earlier version also minted an ERC-20 one-for-one with weight, which was a second
+/// name for the same number — and a dangerous one, because the token transferred while
+/// the weight behind it did not. Selling it would have moved nothing.
+///
 /// Rewards use the standard pull-based accumulator, so a donation costs the same gas
 /// whether there are five contributors or fifty thousand — it never loops over them.
-contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
+contract WorldWideWC is Ownable, ReentrancyGuard {
     /// @notice Weight earned for logging a toilet yourself.
     uint256 public constant WEIGHT_HUMAN_LOG = 10;
     /// @notice Weight earned by an agent-sourced entry. Lower: it is cheaper to produce
@@ -71,10 +76,7 @@ contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor(address initialOwner, address initialRelayer)
-        ERC20("World Wide WC", "WC")
-        Ownable(initialOwner)
-    {
+    constructor(address initialOwner, address initialRelayer) Ownable(initialOwner) {
         relayer = initialRelayer;
         emit RelayerChanged(initialRelayer);
     }
@@ -226,7 +228,8 @@ contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
     }
 
     /// @dev Flushes first, so a donation made before someone arrived is not diluted by
-    ///      their arrival. Mints WC 1:1 with weight, so contributors see coins in a wallet.
+    ///      their arrival, and again afterwards because the larger total may now divide a
+    ///      remainder that previously could not be shared out.
     function _addWeight(address contributor, uint256 weight) internal {
         _flushPool();
         _settle(contributor);
@@ -235,7 +238,6 @@ contract WorldWideWC is ERC20, Ownable, ReentrancyGuard {
         totalWeight += weight;
         rewardDebt[contributor] = weightOf[contributor] * accPerWeight;
 
-        _mint(contributor, weight * 1e18);
         _flushPool();
     }
 }

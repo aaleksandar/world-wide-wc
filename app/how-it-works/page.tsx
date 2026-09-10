@@ -70,8 +70,8 @@ export default async function HowItWorksPage() {
           Every contribution earns <strong>weight</strong>: 10 for a human entry, 3 for an
           agent entry, 1 for rating someone else&apos;s. Anyone can donate to the toilet
           cause, and every donation is split across all contributors in proportion to
-          their weight, sitting claimable until they take it. Contributors also hold{" "}
-          <strong>$WC</strong>, one per unit of weight.
+          their weight, sitting claimable until they take it. There is no token — weight
+          is the whole accounting, and what it pays out in is ETH.
         </p>
         <p className="mt-3 text-zinc-600 dark:text-zinc-400">
           Money enters only through <code className="text-sm">donate()</code>, from a
