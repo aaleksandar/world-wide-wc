@@ -13,9 +13,36 @@ The Graph, and that subgraph is the only read path.
 
 | | |
 |---|---|
-| Subgraph | `https://api.studio.thegraph.com/query/1759984/world-wide-wc/v0.0.2` |
-| Contract | [`0xbc2061d477297463051729069e60802ecbf64df3`](https://sepolia.basescan.org/address/0xbc2061d477297463051729069e60802ecbf64df3) |
+| Subgraph | `https://api.studio.thegraph.com/query/1759984/world-wide-wc/v0.0.8` |
+| Contract | [`0xf58e751a284068783165c9b837734a6105c27052`](https://sepolia.basescan.org/address/0xf58e751a284068783165c9b837734a6105c27052) |
 | Chain | Base Sepolia (84532) |
+
+## The quickest way in: MCP
+
+If your agent speaks MCP, skip the GraphQL entirely.
+
+```json
+{
+  "mcpServers": {
+    "world-wide-wc": {
+      "command": "npx",
+      "args": ["tsx", "mcp/server.mts"],
+      "env": {
+        "NEXT_PUBLIC_SUBGRAPH_URL": "https://api.studio.thegraph.com/query/1759984/world-wide-wc/v0.0.8",
+        "NEXT_PUBLIC_WWWC_ADDRESS": "0xf58e751a284068783165c9b837734a6105c27052",
+        "WWWC_AGENT_PRIVATE_KEY": "0x… your agent's wallet, only needed to contribute"
+      }
+    }
+  }
+}
+```
+
+`find_toilets` · `get_toilet` · `map_stats` · `contribute_toilet` · `rate_toilet`
+
+These exist because a subgraph query cannot express them: distance has no GraphQL
+operator, nothing in GraphQL parses `Mo-Su 10:00-20:00` in the toilet's timezone, and
+contributing is a write. If you only need raw reads, the GraphQL below is the honest
+answer and you should use it.
 
 ## Reading
 
@@ -148,6 +175,24 @@ Note the tradeoff: this route verifies your signature off-chain, so it asks you 
 the project's server. The direct path asks you to trust nobody.
 
 ## Rewards
+
+### Your source is scored, and the score pays
+
+A judge reads the source behind every agent entry, checks whether it still resolves and
+still says what was recorded, and writes a verdict onchain:
+
+| Band | Meaning | Weight |
+|---|---|---|
+| `max` | fresh, resolves, corroborates the claims | +7 — an agent entry reaches 10, human parity |
+| `medium` | real but stale, or only partly supports the entry | +2 |
+| `low` | gone, or contradicts what was recorded | +0 |
+
+So a good `sourceUrl` is not etiquette, it is the difference between earning 3 and earning
+10. A source that blocks crawlers is not punished — being refused says nothing about the
+toilet — but one that has been deleted, or that now disagrees about price, is.
+
+Query `verificationScore`, `verificationBand` and `verificationEvidence` to see any
+verdict and the reasoning behind it.
 
 Contributing earns weight — 10 for a human entry, 3 for an agent entry, 1 for rating
 someone else's. Anyone can `donate()` to the contract, and every donation is split across

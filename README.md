@@ -8,9 +8,9 @@ Built for [ETHOnline 2026](https://ethglobal.com/events/ethonline2026).
 
 | | |
 |---|---|
-| Contract | [`0xbc2061d477297463051729069e60802ecbf64df3`](https://sepolia.basescan.org/address/0xbc2061d477297463051729069e60802ecbf64df3) · Base Sepolia |
-| Subgraph | [`world-wide-wc/v0.0.2`](https://api.studio.thegraph.com/query/1759984/world-wide-wc/v0.0.2) · Subgraph Studio |
-| Agent docs | [SKILL.md](./SKILL.md) |
+| Contract | [`0xf58e751a284068783165c9b837734a6105c27052`](https://sepolia.basescan.org/address/0xf58e751a284068783165c9b837734a6105c27052) · Base Sepolia |
+| Subgraph | [`world-wide-wc/v0.0.8`](https://api.studio.thegraph.com/query/1759984/world-wide-wc/v0.0.8) · Subgraph Studio |
+| Agent docs | [SKILL.md](./SKILL.md) · MCP server at `mcp/server.mts` |
 
 ## The problem
 
@@ -38,6 +38,60 @@ answered and the form asks only those questions.
 **Donations flow to both.** Anyone can contribute to the ecosystem. Every donation splits
 across all contributors in proportion to what they contributed, claimable whenever they
 want it.
+
+## The judge
+
+An agent can tell you a toilet exists. It cannot tell you whether the page it read is
+still true. So a judge reads entries back out of the subgraph and checks the source behind
+each one — does it still resolve, when was it last surveyed, does it still say what we
+recorded — and writes a verdict onchain.
+
+| Band | Meaning | Weight earned |
+|---|---|---|
+| `max` | fresh, resolves, corroborates the claims | **+7** |
+| `medium` | real but stale, or only partly supporting | +2 |
+| `low` | deleted, or contradicts the entry | +0 |
+
+An agent entry starts at weight 3 *precisely because nobody checked it*. A proven source
+lifts it to 10 — exactly what a person standing there would have earned. Weight stops
+being declared and starts being earned.
+
+The division of labour matters. `lib/evidence.ts` establishes every fact deterministically
+— whether the source resolves, how many days old it is, which fields it now contradicts —
+so the model is only ever asked to do the part with no formula: weighing a five-year-old
+but uncontradicted source against a fresh one that disagrees on price. It is never trusted
+to count days.
+
+Two judgements it gets right that a cruder rule would not: a source untouched for 1833
+days lands `medium` rather than `max` even with nothing contradicting it, and a site that
+answers 403 to crawlers lands `medium` rather than `low`, because being refused tells you
+nothing about the toilet.
+
+`verify()` pays only the difference between what a score earns and what was already
+granted, and never reduces — so the reward accumulator stays increase-only and nobody
+loses ETH they already accrued because a judge changed its mind.
+
+**Named tradeoff:** the judge is relayer-gated, so we decide who grants bonus weight. That
+is a centralisation point. It is mitigated by putting the reasoning onchain — every verdict
+is publicly auditable — and by capping the bonus at human parity, so no verdict can mint
+more than an honest first-hand visit.
+
+## An MCP server that isn't a wrapper
+
+The Graph already ships a Subgraph MCP across 15,000+ subgraphs, so proxying GraphQL would
+be worth nothing. Every tool in `mcp/server.mts` is something a subgraph query cannot
+express:
+
+- **`find_toilets`** — distance has no GraphQL operator, and nothing in GraphQL parses
+  `Jan-Feb 08:00-18:00` in the toilet's own timezone.
+- **`contribute_toilet`, `rate_toilet`** — writes. All nine of The Graph's MCP tools are
+  read-only, and an agent that cannot contribute is useless to a map built by contributors.
+
+There is a blunter reason too: this subgraph lives in Studio on Base Sepolia, and The
+Graph's MCP needs a Gateway key against published subgraphs, so it cannot reach this data
+at all.
+
+We don't charge for it. The value is the capability, not the access.
 
 ## Why The Graph is load-bearing
 
@@ -195,6 +249,9 @@ Verification scripts, all against the live deployment rather than a local node:
 | `npx tsx scripts/test-rewards.mts` | donate → accrue → claim, asserting conservation |
 | `npx tsx scripts/test-third-party-agent.mts` | a stranger's agent contributing both ways |
 | `npx tsx scripts/test-photo.mts <image>` | photo → IPFS → onchain → subgraph → back |
+| `npx tsx scripts/test-judge.mts` | the judge, on cases with known answers |
+| `npx tsx scripts/test-mcp.mts` | every MCP tool over stdio, including writes |
+| `npm run judge -- --dry-run` | reason over live entries, write nothing |
 | `npx tsx scripts/status.mts` | does the subgraph agree with the chain? |
 
 ## Notes from the build
