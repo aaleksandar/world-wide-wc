@@ -40,6 +40,11 @@ export type ToiletRecord = {
   sourceUrl: string;
   contributor: string;
   ratingCount: number;
+  /** A judge's verdict on the source. "unchecked" is distinct from a bad score. */
+  verificationScore: number;
+  verificationBand: "unchecked" | "low" | "medium" | "max";
+  verificationEvidence: string;
+  weightBonus: number;
   /** Averaged over the original entry and every rating since. Zero means nobody has said. */
   avgCleanliness: number;
   avgSmell: number;
@@ -83,6 +88,10 @@ const TOILET_FIELDS = `
   source
   sourceUrl
   ratingCount
+  verificationScore
+  verificationBand
+  verificationEvidence
+  weightBonus
   avgCleanliness
   avgSmell
   avgBusyness
@@ -168,6 +177,10 @@ async function previewToilets(): Promise<ToiletRecord[]> {
     lng: entry.lng,
     contributor: "0x0000000000000000000000000000000000000000",
     ratingCount: 0,
+    verificationScore: 0,
+    verificationBand: "unchecked" as const,
+    verificationEvidence: "",
+    weightBonus: 0,
     avgCleanliness: 0,
     avgSmell: 0,
     avgBusyness: 0,
@@ -320,10 +333,12 @@ export async function searchToilets(search: ToiletSearch): Promise<ToiletHit[]> 
 
   if (search.access?.length) where.access_in = search.access;
   if (search.minCleanliness) where.avgCleanliness_gte = search.minCleanliness.toString();
-  if (search.needsPaper) where.hasPaper = true;
-  if (search.needsStepFree) where.isAccessible = true;
-  if (search.needsChangingTable) where.hasChangingTable = true;
-  if (search.needsBidet) where.hasBidet = true;
+  // YES rather than true: these became a tri-state enum, and "nobody has said" must not
+  // be mistaken for a no. Asking for step-free returns only toilets somebody confirmed.
+  if (search.needsPaper) where.hasPaper = "YES";
+  if (search.needsStepFree) where.isAccessible = "YES";
+  if (search.needsChangingTable) where.hasChangingTable = "YES";
+  if (search.needsBidet) where.hasBidet = "YES";
 
   const data = await query<{ toilets: RawToilet[] }>(
     `query Search($where: Toilet_filter!, $first: Int!) {

@@ -16,9 +16,11 @@
     "seed": "tsx scripts/submit-seed.mts",
     "copy:map-worker": "tsx scripts/copy-map-worker.mts",
     "predev": "npm run copy:map-worker",
-    "prebuild": "npm run copy:map-worker"
+    "prebuild": "npm run copy:map-worker",
+    "mcp": "tsx mcp/server.mts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@tanstack/react-query": "^5.102.8",
     "@types/tz-lookup": "^6.1.2",
     "lucide-react": "^1.44.0",
@@ -29,7 +31,8 @@
     "react-dom": "19.2.8",
     "tz-lookup": "^6.1.25",
     "viem": "^2.56.3",
-    "wagmi": "^2.19.5"
+    "wagmi": "^2.19.5",
+    "zod": "^4.6.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
