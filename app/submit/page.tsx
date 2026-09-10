@@ -7,6 +7,7 @@ import { ConnectButton } from "@/components/ConnectButton";
 import { PinMap } from "@/components/PinMap";
 import { chain, explorerTxUrl, toChainCoord } from "@/lib/chain";
 import { CONTRIBUTION_DOMAIN, CONTRIBUTION_TYPES } from "@/lib/contribution";
+import { shrinkImage } from "@/lib/image";
 import { ACCESS, type Access, type Toilet, encodePayload } from "@/lib/payload";
 
 const LONDON = { lat: 51.5072, lng: -0.1276 };
@@ -58,9 +59,12 @@ export default function SubmitPage() {
     try {
       let photoUrl = draft.photoUrl ?? "";
       if (photo) {
+        setStatus({ state: "working", message: "Shrinking photo…" });
+        const smaller = await shrinkImage(photo);
+
         setStatus({ state: "working", message: "Uploading photo…" });
         const form = new FormData();
-        form.set("photo", photo);
+        form.set("photo", smaller);
         const response = await fetch("/api/photo", { method: "POST", body: form });
         const body = (await response.json()) as { url?: string; error?: string };
         if (!response.ok) throw new Error(body.error ?? "Photo upload failed");

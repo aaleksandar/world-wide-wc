@@ -134,6 +134,21 @@ the conservation test caught it before it ever reached a testnet.
 A donation that doesn't divide evenly leaves a remainder pending for the next one — 0.001
 ETH across weight 370 carries 260 wei. Nothing is lost, it just arrives later.
 
+## Redeploying without losing anyone's work
+
+Redeploying the contract starts an empty registry, so anything already submitted is
+orphaned. That is not theoretical: it cost a contributor their entry twice during the
+build before this existed.
+
+```bash
+npx tsx scripts/migrate.mts --from <old subgraph url> --dry-run   # see what would move
+npx tsx scripts/migrate.mts --from <old subgraph url>
+```
+
+Entries are re-logged with `logFor`, so each one keeps its original contributor address
+and its provenance — the weight goes to whoever earned it, not to whoever ran the script.
+Matching is on contributor plus coordinates, so running it twice is safe.
+
 ## Running it
 
 ```bash

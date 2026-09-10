@@ -59,9 +59,21 @@ export async function pinRemotely(cid: string): Promise<boolean> {
   }
 }
 
-/** `ipfs://Qm…` → a URL a browser can load. Leaves http(s) URLs alone. */
+/**
+ * `ipfs://Qm…` → a URL a browser can load. Leaves http(s) URLs alone.
+ *
+ * Routes through our own origin rather than straight to a public gateway: a gateway has to
+ * locate a CID on the network first, and immediately after an upload it cannot, so the
+ * contributor who just added a photo would be the one person to see it broken.
+ */
 export function ipfsToHttp(uri: string): string {
   if (!uri) return "";
-  if (uri.startsWith("ipfs://")) return `${IPFS_GATEWAY}/${uri.slice("ipfs://".length)}`;
+  if (uri.startsWith("ipfs://")) return `/api/photo/${uri.slice("ipfs://".length)}`;
   return uri;
+}
+
+/** The canonical public URL, for anyone who would rather not trust our server. */
+export function ipfsToGateway(uri: string): string {
+  if (!uri.startsWith("ipfs://")) return uri;
+  return `${IPFS_GATEWAY}/${uri.slice("ipfs://".length)}`;
 }
